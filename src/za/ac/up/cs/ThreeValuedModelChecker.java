@@ -23,21 +23,17 @@ public class ThreeValuedModelChecker {
     private static final int FALSE_VAL = 0;
     private static final int TRUE_VAL = 1;
     private static final int UNKNOWN_VAL = 2;
-    private final EnumeratorOfExpression predicates;
-    private final CFGraph cfg;
-    private final Map<String, Var> vars = new HashMap<String, Var>();
+    private final EnumeratorOfCFGraph cfgs;
+    private final Map<String, Var> vars = new HashMap<>();
     // Used to lookup the number of the predicate
-    private final Map<String, Integer> predMap = new HashMap<String, Integer>();
+    private final Map<String, Integer> predMap = new HashMap<>();
     private final int maxBound;
-    private final int numberOfLocs;
     private final int numberOfPreds;
 //    private List<KState> states;
 
-    public ThreeValuedModelChecker(EnumeratorOfExpression predicates, CFGraph cfg, int maxBound) {
-        this.predicates = predicates;
-        this.cfg = cfg;
+    public ThreeValuedModelChecker(EnumeratorOfExpression predicates, EnumeratorOfCFGraph cfgs, int maxBound) {
+        this.cfgs = cfgs;
 
-        this.numberOfLocs = cfg.getStateCount();
 //        this.numberOfLocs = 4;
         this.maxBound = maxBound;
 //        states = new ArrayList<>();
@@ -55,30 +51,30 @@ public class ThreeValuedModelChecker {
 
     }
 
-    private Formula encState(KState state, int bound) {
-        // See definition 3 [TGH-Draft-2016]
-
-        List<Formula> formulas = new LinkedList<Formula>();
-
-        // For each pred i in Pred
-        for (int i = 0; i < numberOfPreds; i++) {
-            Integer stateAtI = state.predVals.get(i);
-            Formula predEncoding = encPred(i, bound, stateAtI);
-            formulas.add(predEncoding);
-        }
-        // AND enc(l = s(l))j
-        Formula locEncoding = encLoc(state.locationVal, bound);
-        formulas.add(locEncoding);
-
-        return and(formulas);
-    }
+//    private Formula encState(KState state, int bound) {
+//        // See definition 3 [TGH-Draft-2016]
+//
+//        List<Formula> formulas = new LinkedList<Formula>();
+//
+//        // For each pred i in Pred
+//        for (int i = 0; i < numberOfPreds; i++) {
+//            Integer stateAtI = state.predVals.get(i);
+//            Formula predEncoding = encPred(i, bound, stateAtI);
+//            formulas.add(predEncoding);
+//        }
+//        // AND enc(l = s(l))j
+//        Formula locEncoding = encLoc(state.locationVal, bound);
+//        formulas.add(locEncoding);
+//
+//        return and(formulas);
+//    }
 
 
     // See definition 2 [TGH-Draft-2016]
-    private Formula encLoc(int loc, int bound) {
+    private Formula encLoc(int process, int loc, int bound, int numberOfLocs) {
         int numOfBinaryDigits = (int) Math.ceil(Math.log(numberOfLocs) / Math.log(2.0));
 
-        List<Formula> formulas = new LinkedList<Formula>();
+        List<Formula> formulas = new LinkedList<>();
 
         // Convert loc to binary and then AND each binary digit together
         int oldLoc;
@@ -87,18 +83,18 @@ public class ThreeValuedModelChecker {
             loc /= 2;
             int remainder = oldLoc - loc * 2;
             if (remainder == 0) {
-                formulas.add(neg(var(locVar(i - 1, bound))));
+                formulas.add(neg(var(locVar(process, i - 1, bound))));
             } else {
                 assert remainder == 1;
-                formulas.add(var(locVar(i - 1, bound)));
+                formulas.add(var(locVar(process, i - 1, bound)));
             }
         }
 
         return and(formulas);
     }
 
-    private Var locVar(int loc, int bound) {
-        return getNamedVar("l_" + loc + "_" + bound);
+    private Var locVar(int process, int loc, int bound) {
+        return getNamedVar("l_" + process + "_" + loc + "_" + bound);
     }
 
     // See definition 2 [TGH-Draft-2016]
@@ -134,18 +130,19 @@ public class ThreeValuedModelChecker {
         System.out.println("---------------------------------------");
         System.out.println("Number of predicates: " + numberOfPreds);
 
-        Formula initialState = and(encLoc(0, 0), encPred(0, 0, TRUE_VAL));
-        System.out.println("Initial state: " + initialState);
+//        Formula initialState = and(encLoc(0, 0, 0), encPred(0, 0, TRUE_VAL));
+//        System.out.println("Initial state: " + initialState);
 
-        Formula t0_1 = encodeTransitions(cfg, 0);
+        Formula t0_1 = encodeTransitions(cfgs, 0);
+        System.out.println("=======================================");
         System.out.println("Transition encoding: " + t0_1);
-        Formula t1_2 = encodeTransitions(cfg, 1);
-        Formula t2_3 = encodeTransitions(cfg, 2);
+//        Formula t1_2 = encodeTransitions(cfg, processCounter, 1);
+//        Formula t2_3 = encodeTransitions(cfg, processCounter, 2);
 
-        Formula encodingNotUnknown = and(initialState, t0_1, t1_2, t2_3, TRUE, neg(FALSE), neg(UNKNOWN));
-        Formula encodingUnknown = and(initialState, t0_1, t1_2, t2_3, TRUE, neg(FALSE), UNKNOWN);
+//        Formula encodingNotUnknown = and(initialState, t0_1, t1_2, t2_3, TRUE, neg(FALSE), neg(UNKNOWN));
+//        Formula encodingUnknown = and(initialState, t0_1, t1_2, t2_3, TRUE, neg(FALSE), UNKNOWN);
 //        Formula encoding2 = and(initialState, t0_1);
-        Formula encoding3 = and(t0_1, t1_2, t2_3, TRUE, neg(FALSE), UNKNOWN);
+//        Formula encoding3 = and(t0_1, t1_2, t2_3, TRUE, neg(FALSE), UNKNOWN);
 //        Formula ltlPropertyEncoding = ;
 
         System.out.println("Vars:");
@@ -154,7 +151,7 @@ public class ThreeValuedModelChecker {
         }
 
 //        String cnfFormula = cnfDIMACS(encoding);
-        Formula cnfFormula = cnf(encodingNotUnknown);
+        Formula cnfFormula = cnf(t0_1);
         System.out.println(cnfFormula);
         try {
             Set<Var> trueVars = CNF.satisfiable(cnfFormula);
@@ -178,14 +175,33 @@ public class ThreeValuedModelChecker {
 //        }
     }
 
+    private Formula encodeTransitions(EnumeratorOfCFGraph cfgs, int bound) {
+        cfgs.reset();
+
+        List<Formula> formulas = new ArrayList<>();
+
+        int processCounter = 0;
+        while (cfgs.hasNext()) {
+            System.out.println("===============" + " PROCESS " + processCounter + " ===============");
+            CFGraph cfg = cfgs.getNext();
+            Formula formula = encodeTransitions(cfg, processCounter, bound);
+            formulas.add(formula);
+            processCounter += 1;
+        }
+
+        return or(formulas);
+    }
+
     /**
+     * Encodes the transitions of a single CFG
      * See definition 3 (Encoding of Transitions)
      *
      * @param cfg
-     * @param bound
-     * @return
+     * @param process
+     *@param bound  @return
      */
-    private Formula encodeTransitions(CFGraph cfg, int bound) {
+    private Formula encodeTransitions(CFGraph cfg, int process, int bound) {
+        int stateCount = cfg.getStateCount();
         EnumeratorOfState states = cfg.getStates();
         List<Formula> formulas = new LinkedList<Formula>();
         LogicParser parser = new LogicParser(predMap, vars, TRUE, FALSE, UNKNOWN, bound);
@@ -205,7 +221,7 @@ public class ThreeValuedModelChecker {
                 int destination = transition.getDestination();
 //                System.out.println("source = " + source);
 //                System.out.println("destination = " + destination);
-                Formula locEncoding = and(encLoc(source, bound), encLoc(destination, bound + 1));
+                Formula locEncoding = and(encLoc(process, source, bound, stateCount), encLoc(process, destination, bound + 1, stateCount));
                 System.out.println("locEncoding = " + locEncoding);
                 currentTransEncoding.add(locEncoding);
 
@@ -283,7 +299,9 @@ public class ThreeValuedModelChecker {
                 formulas.add(and(currentTransEncoding));
             }
         }
-        return or(formulas);
+        Formula or = or(formulas);
+        System.out.println("Process encoding: " + or);
+        return or;
     }
 
     Var getNamedVar(String s) {

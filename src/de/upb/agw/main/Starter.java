@@ -398,8 +398,9 @@ public class Starter {
 			run();
         EnumeratorOfCFGraph abstractedCFGs = abstractor.getAbstractedCFGs();
         abstractedCFGs.reset();
-//        abstractedCFGs.getNext();
-        ThreeValuedModelChecker modelChecker = new ThreeValuedModelChecker(abstractor.getPredicates(), abstractedCFGs.getNext(), 1);
+        int numberOfProcesses = abstractedCFGs.getNumberofElements();
+        System.out.println("numberOfProcesses = " + numberOfProcesses);
+        ThreeValuedModelChecker modelChecker = new ThreeValuedModelChecker(abstractor.getPredicates(), abstractedCFGs, 1);
 		modelChecker.test();
         cleanup();
 	}
