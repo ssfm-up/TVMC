@@ -1,0 +1,14 @@
+digraph CFG {
+graph [rankdir=LR];
+node [ label = "PC_0 = 0\n(not (> (* x y) (+ x y))) = F\nexec_0; = F\n" ]; state_0;
+node [ label = "PC_0 = 2\n(not (> (* x y) (+ x y))) = F\nexec_0; = T\n" ]; state_1;
+node [ label = "PC_0 = 4\n(not (> (* x y) (+ x y))) = M\nexec_0; = T\n" ]; state_2;
+node [ label = "PC_0 = 0\n(not (> (* x y) (+ x y))) = M\nexec_0; = T\n" ]; state_3;
+node [ label = "PC_0 = 3\n(not (> (* x y) (+ x y))) = M\nexec_0; = T\n" ]; state_4;
+start [style = filled, color=black, label="", height=0.12,width=0.12,fontsize=1];
+start -> state_0[ style = "bold"];
+state_0 -> state_1 [ label = T ];
+state_1 -> state_2 [ label = T ];
+state_2 -> state_3 [ label = T ];
+state_3 -> state_4 [ label = M ];
+}

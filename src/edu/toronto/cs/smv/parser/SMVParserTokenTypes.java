@@ -1,0 +1,44 @@
+// $ANTLR 2.7.6 (2005-12-22): "flatsmv.g" -> "SMVLexer.java"$
+ package edu.toronto.cs.smv.parser;
+public interface SMVParserTokenTypes {
+	int EOF = 1;
+	int NULL_TREE_LOOKAHEAD = 3;
+	int TRANS = 4;
+	int VALUE = 5;
+	int PROPVAR = 6;
+	int ENUMVAR = 7;
+	int ZERO = 8;
+	int ONE = 9;
+	int NEXTPROPVAR = 10;
+	int NEXTENUMVAR = 11;
+	int OR = 12;
+	int AND = 13;
+	int NEG = 14;
+	int BOOLEQ = 15;
+	int VALEQ = 16;
+	int UNION = 17;
+	int NEXT = 18;
+	int VAR = 19;
+	int IVAR = 20;
+	int ASSIGN = 21;
+	int MODULE = 22;
+	int CASE = 23;
+	int ESAC = 24;
+	int INIT = 25;
+	int DEFINE = 26;
+	int VARNAME = 27;
+	int COL = 28;
+	int SEMI = 29;
+	int LBRACE = 30;
+	int RBRACE = 31;
+	int COMMA = 32;
+	int ASSIGNOP = 33;
+	int IMPLIES = 34;
+	int EQ = 35;
+	int LPAREN = 36;
+	int RPAREN = 37;
+	int IDENT = 38;
+	int COMMENT = 39;
+	int WS = 40;
+	int NEWLINE = 41;
+}

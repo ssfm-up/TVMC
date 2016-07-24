@@ -1,0 +1,103 @@
+<!-- 9-valued logic -->
+
+<gxl>
+ <graph ID='9val-logic' edgemode='directed'>
+   <!-- logic values -->
+   <node ID='TT'/>
+   <node ID='TM'/>
+   <node ID='MT'/>
+   <node ID='MM'/>
+   <node ID='TF'/>
+   <node ID='FT'/>
+   <node ID='FM'/>
+   <node ID='MF'/>
+   <node ID='FF'/>
+
+   <!-- logic order -->
+   <edge from='TT' to='TM'>
+    <type value='above'/>
+   </edge>
+
+   <edge from='TT' to='MT'>
+    <type value='above'/>
+   </edge>
+
+   <edge from='TM' to='MM'>
+    <type value='above'/>
+   </edge>
+ 
+   <edge from='TM' to='TF'>
+    <type value='above'/>
+   </edge>
+ 
+   <edge from='MT' to='MM'>
+    <type value='above'/>
+   </edge>
+ 
+   <edge from='MT' to='FT'>
+    <type value='above'/>
+   </edge>
+
+   <edge from='TF' to='MF'>
+    <type value='above'/>
+   </edge>
+ 
+   <edge from='FT' to='FM'>
+    <type value='above'/>
+   </edge>
+
+   <edge from='MM' to='FM'>
+    <type value='above'/>
+   </edge>
+ 
+   <edge from='MM' to='MF'>
+    <type value='above'/>
+   </edge>
+
+   <edge from='FM' to='FF'>
+    <type value='above'/>
+   </edge>
+ 
+   <edge from='MF' to='FF'>
+    <type value='above'/>
+   </edge>
+
+   <!-- negation order -->
+   <edge from='TT' to='FF'>
+     <type value='neg'/>
+   </edge>
+
+   <edge from='TF' to='FT'>
+     <type value='neg'/>
+   </edge>
+
+   <edge from='FT' to='TF'>
+     <type value='neg'/>
+   </edge>
+
+   <edge from='FF' to='TT'>
+     <type value='neg'/>
+   </edge>
+
+   <edge from='MM' to='MM'>
+     <type value='neg'/>
+   </edge>
+
+   <edge from='FM' to='TM'>
+     <type value='neg'/>
+   </edge>
+
+   <edge from='MF' to='MT'>
+     <type value='neg'/>
+   </edge>
+
+   <edge from='MT' to='MF'>
+     <type value='neg'/>
+   </edge>
+
+   <edge from='TM' to='FM'>
+     <type value='neg'/>
+   </edge>
+
+ </graph>
+</gxl>

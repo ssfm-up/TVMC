@@ -1,0 +1,15 @@
+;; Object antlr/
+;; SEMANTICDB Tags save file
+(semanticdb-project-database-file "antlr/"
+  :tables (list 
+   (semanticdb-table "TestDriver.java"
+    :major-mode 'jde-mode
+    :tags '(("edu.toronto.cs.ctl.antlr" package nil nil [1 34]) ("java.io.*" include nil nil [37 54]) ("antlr.CommonAST" include nil nil [55 78]) ("antlr.collections.AST" include nil nil [79 108]) ("antlr.debug.misc.ASTFrame" include nil nil [109 142]) ("edu.toronto.cs.algebra.*" include nil nil [143 175]) ("edu.toronto.cs.mvset.*" include nil nil [176 206]) ("TestDriver" type (:typemodifiers ("public") :members (("main" function (:typemodifiers ("public" "static") :arguments (("args" variable (:type "String[]") (reparse-symbol formal_parameters) [261 274])) :type "void") (reparse-symbol class_member_declaration) [237 549]) ("drawFrame" function (:typemodifiers ("public" "static") :arguments (("ptree" variable (:type "AST") (reparse-symbol formal_parameters) [581 590])) :type "void") (reparse-symbol class_member_declaration) [552 681])) :type "class") nil [208 683]))
+    :file "TestDriver.java"
+    :pointmax 687
+    )
+   )
+  :file "semantic.cache"
+  :semantic-tag-version "2.0pre3"
+  :semanticdb-version "2.0pre3"
+  )
