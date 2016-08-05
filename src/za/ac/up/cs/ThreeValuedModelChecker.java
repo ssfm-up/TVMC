@@ -129,21 +129,36 @@ public class ThreeValuedModelChecker {
     public void test() {
         System.out.println("---------------------------------------");
         System.out.println("Number of predicates: " + numberOfPreds);
+        cfgs.reset();
+        int stateCountPc_0 = cfgs.getNext().getStateCount();
+        int stateCountPc_1 = cfgs.getNext().getStateCount();
 
-//        Formula initialState = and(encLoc(0, 0, 0), encPred(0, 0, TRUE_VAL));
+        Formula initialState = and(encLoc(0, 0, 0, stateCountPc_0), encLoc(1, 0, 0, stateCountPc_1), encPred(0, 0, TRUE_VAL));
 //        System.out.println("Initial state: " + initialState);
 
         Formula t0_1 = encodeTransitions(cfgs, 0);
+        Formula t1_2 = encodeTransitions(cfgs, 1);
+        Formula t2_3 = encodeTransitions(cfgs, 2);
         System.out.println("=======================================");
         System.out.println("Transition encoding: " + t0_1);
 //        Formula t1_2 = encodeTransitions(cfg, processCounter, 1);
 //        Formula t2_3 = encodeTransitions(cfg, processCounter, 2);
 
-//        Formula encodingNotUnknown = and(initialState, t0_1, t1_2, t2_3, TRUE, neg(FALSE), neg(UNKNOWN));
-//        Formula encodingUnknown = and(initialState, t0_1, t1_2, t2_3, TRUE, neg(FALSE), UNKNOWN);
+        // Finally ( pc_0 = Critical AND pc_1 = Critical) ---> Should be false
+
+
+        List<Formula> formulas = new ArrayList<>();
+        for (int bound = 0; bound < maxBound; bound++) {
+            Formula bothProcessesInCritical = and(encLoc(0, 3, bound, stateCountPc_0), encLoc(1, 3, bound, stateCountPc_1));
+            formulas.add(bothProcessesInCritical);
+        }
+        Formula ltlPropertyEncoding = or(formulas);
+
+
+        Formula encodingNotUnknown = and(initialState, t0_1, t1_2, t2_3, ltlPropertyEncoding, TRUE, neg(FALSE), neg(UNKNOWN));
+        Formula encodingUnknown = and(initialState, t0_1, t1_2, t2_3, ltlPropertyEncoding, TRUE, neg(FALSE), UNKNOWN);
 //        Formula encoding2 = and(initialState, t0_1);
 //        Formula encoding3 = and(t0_1, t1_2, t2_3, TRUE, neg(FALSE), UNKNOWN);
-//        Formula ltlPropertyEncoding = ;
 
         System.out.println("Vars:");
         for (Map.Entry<String, Var> e : vars.entrySet()) {
@@ -151,7 +166,7 @@ public class ThreeValuedModelChecker {
         }
 
 //        String cnfFormula = cnfDIMACS(encoding);
-        Formula cnfFormula = cnf(t0_1);
+        Formula cnfFormula = cnf(encodingUnknown);
         System.out.println(cnfFormula);
         try {
             Set<Var> trueVars = CNF.satisfiable(cnfFormula);
