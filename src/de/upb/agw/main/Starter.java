@@ -3,13 +3,15 @@ package de.upb.agw.main;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Vector;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
 
 import javax.swing.JTextArea;
 
+import cnf.Formula;
 import de.upb.agw.analysis.Analyser;
 import de.upb.agw.analysis.ProofAnalyser;
 import de.upb.agw.gui.project.SpotlightProject;
@@ -400,8 +402,56 @@ public class Starter {
         abstractedCFGs.reset();
         int numberOfProcesses = abstractedCFGs.getNumberofElements();
         System.out.println("numberOfProcesses = " + numberOfProcesses);
-        ThreeValuedModelChecker modelChecker = new ThreeValuedModelChecker(abstractor.getPredicates(), abstractedCFGs, 1);
-		modelChecker.test();
+
+        //////////////////////////////////////////////////////
+        int iterations = 48;
+        Path file = Paths.get("the-file-name.txt");
+        List<String> lines = new ArrayList<>();
+        lines.add("Init time,LTL formula encoding time,Unknown construction time,Not unknown construction time,Unknown SAT checking time,Not unknown SAT checking time");
+        for (int i = 0; i < iterations; i++) {
+            String line = "";
+
+            // Init
+            long time = System.currentTimeMillis();
+            ThreeValuedModelChecker modelChecker = new ThreeValuedModelChecker(abstractor.getPredicates(), abstractedCFGs, i);
+            long timeUsed = (System.currentTimeMillis() - time);
+            line += timeUsed + ",";
+
+            // LTL formula encoding time
+            time = System.currentTimeMillis();
+            Formula ltlEncoding = modelChecker.constructLtlEncoding();
+            timeUsed = (System.currentTimeMillis() - time);
+            line += timeUsed + ",";
+
+            // Unknown construction time
+            time = System.currentTimeMillis();
+            Formula unknownFormula = modelChecker.constructFormulaUnknown(ltlEncoding);
+            timeUsed = (System.currentTimeMillis() - time);
+            line += timeUsed + ",";
+
+            // Not unknown construction time
+            time = System.currentTimeMillis();
+            Formula notUnknownFormula = modelChecker.constructFormulaNotUnknown(ltlEncoding);
+            timeUsed = (System.currentTimeMillis() - time);
+            line += timeUsed + ",";
+
+            // Unknown SAT checking time"
+            time = System.currentTimeMillis();
+            modelChecker.checkSatisfiability(unknownFormula);
+            timeUsed = (System.currentTimeMillis() - time);
+            line += timeUsed + ",";
+
+            // Not unknown SAT checking time"
+            time = System.currentTimeMillis();
+            modelChecker.checkSatisfiability(notUnknownFormula);
+            timeUsed = (System.currentTimeMillis() - time);
+            line += timeUsed;
+
+            lines.add(line);
+        }
+        Files.write(file, lines, Charset.forName("UTF-8"));
+        //////////////////////////////////////////////////////
+
         cleanup();
 	}
 	
