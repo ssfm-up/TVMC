@@ -30,7 +30,6 @@ public class ThreeValuedModelChecker {
     private final int maxBound;
     private final int numberOfPreds;
     private final int numberOfProcesses;
-//    private List<KState> states;
 
     public ThreeValuedModelChecker(EnumeratorOfExpression predicates, EnumeratorOfCFGraph cfgs, int maxBound) {
         this.cfgs = cfgs;
@@ -132,9 +131,6 @@ public class ThreeValuedModelChecker {
         Formula initialState = and(encLoc(0, 0, 0, stateCountPc_0), encLoc(1, 0, 0, stateCountPc_1), encPred(0, 0, TRUE_VAL));
         Formula transitionEncoding = encodeTransitions(cfgs, maxBound);
 
-//        System.out.println("=======================================");
-//        System.out.println("Transition encoding: " + t0_1);
-
         return and(initialState, transitionEncoding, ltlPropertyEncoding, TRUE, neg(FALSE), neg(UNKNOWN));
     }
 
@@ -153,7 +149,6 @@ public class ThreeValuedModelChecker {
 
     public void checkSatisfiability(Formula formula) {
         Formula cnfFormula = cnf(formula);
-//        System.out.println(cnfFormula);
         try {
             Set<Var> trueVars = CNF.satisfiable(cnfFormula);
             if (trueVars != null) {
@@ -187,7 +182,6 @@ public class ThreeValuedModelChecker {
 
         int processCounter = 0;
         while (cfgs.hasNext()) {
-//            System.out.println("===============" + " PROCESS " + processCounter + " ===============");
             CFGraph cfg = cfgs.getNext();
             Formula formula = encodeTransition(cfg, processCounter, bound);
             formulas.add(formula);
@@ -213,7 +207,7 @@ public class ThreeValuedModelChecker {
      *
      * @param cfg
      * @param process
-     *@param bound  @return
+     * @param bound   @return
      */
     private Formula encodeTransition(CFGraph cfg, int process, int bound) {
         int stateCount = cfg.getStateCount();
@@ -229,13 +223,9 @@ public class ThreeValuedModelChecker {
                 List<Formula> currentTransEncoding = new LinkedList<>();
                 Transition transition = transitions.getNext();
                 Operation operation = transition.getOperation();
-//                System.out.println("---------------------------------------");
-//                System.out.println("Op:   " + operation.__toString());
 
                 int source = transition.getSource();
                 int destination = transition.getDestination();
-//                System.out.println("source = " + source);
-//                System.out.println("destination = " + destination);
                 Formula locEncoding = and(encLoc(process, source, bound, stateCount), encLoc(process, destination, bound + 1, stateCount));
                 currentTransEncoding.add(locEncoding);
 
@@ -246,7 +236,6 @@ public class ThreeValuedModelChecker {
                         currentTransEncoding.add(idlingEncoding);
                     }
                 }
-//                System.out.println("locEncoding = " + locEncoding);
 
                 Expression condExpr = operation.getCondExpr();
                 if (condExpr != null) {
@@ -262,22 +251,18 @@ public class ThreeValuedModelChecker {
                         bRaw = bRaw.substring(1, bRaw.length() - 1);
                     }
                     String str = "not(" + bRaw + ")";
-//                    System.out.println("str = " + str);
                     String modifiedB = parserHelper.cleanExpression(str);
-//                    System.out.println("modifiedB = " + modifiedB);
                     Formula notB = parserHelper.parser.LOGIC_PARSER.parse(modifiedB);
                     // choice(a, b) = (a or not b) and (a or b or unknown)
 //                    Formula choiceEncoding = and(or(a, neg(b)), or(a, b, UNKNOWN));
                     Formula choiceEncoding = and(or(a, notB), or(a, b, UNKNOWN));
                     currentTransEncoding.add(choiceEncoding);
-//                    System.out.println("Choice encoding: " + choiceEncoding);
                 }
 
                 EnumeratorOfAssignment assignments = operation.getAssignments();
 
                 // TODO Check for all unmodified preds, instead of only when there aren't any next assignments
                 if (!assignments.hasNext()) {
-                    List<Formula> assignmentEncoding = new ArrayList<>();
                     predMap.forEach((predStr, pred) -> {
                         Formula pUK = var(predVar(pred, bound, false));
                         Formula pUKp1 = var(predVar(pred, bound + 1, false));
@@ -288,10 +273,8 @@ public class ThreeValuedModelChecker {
                         Formula f2 = and(or(neg(pTK), pTKp1), or(pTK, neg(pTKp1)));
 
                         Formula and = and(f1, f2);
-                        assignmentEncoding.add(and);
                         currentTransEncoding.add(and);
                     });
-//                    System.out.println("assignmentEncoding = " + assignmentEncoding);
                 }
 
 
@@ -315,15 +298,10 @@ public class ThreeValuedModelChecker {
                     currentTransEncoding.add(or);
                 }
 
-                if (assignmentEncoding.size() != 0) {
-//                    System.out.println("assignmentEncoding = " + assignmentEncoding);
-                }
-
                 formulas.add(and(currentTransEncoding));
             }
         }
         Formula or = or(formulas);
-//        System.out.println("Process encoding: " + or);
         return or;
     }
 
@@ -333,7 +311,7 @@ public class ThreeValuedModelChecker {
         for (int i = 0; i < stateCount; i++) {
             Formula a = encLoc(process, i, bound, stateCount);
             Formula b = encLoc(process, i, bound + 1, stateCount);
-            formulas.add(iff(a,b));
+            formulas.add(iff(a, b));
         }
 
         return and(formulas);
@@ -357,7 +335,7 @@ public class ThreeValuedModelChecker {
 
         Formula transitionEncoding = encodeTransitions(cfgs, maxBound);
 
-        checkSatisfiability( and(initialState, transitionEncoding,  TRUE, neg(FALSE), UNKNOWN));
+        checkSatisfiability(and(initialState, transitionEncoding, TRUE, neg(FALSE), UNKNOWN));
     }
 
     /**
@@ -385,10 +363,8 @@ public class ThreeValuedModelChecker {
 
         public ParserHelper invoke() {
             String[] split = s.split(",");
-//            System.out.println(split[0].substring(7));
             String s1 = cleanExpression(split[0].substring(7));
             String s2 = cleanExpression(split[1].substring(0, split[1].length() - 1));
-//            System.out.println("s1 = " + s1);
             a = parser.LOGIC_PARSER.parse(s1);
             b = parser.LOGIC_PARSER.parse(s2);
             return this;
@@ -404,7 +380,6 @@ public class ThreeValuedModelChecker {
         @NotNull
         private String cleanChoiceExpression(String str) {
             String s = cleanExpression(str);
-//            System.out.println(s[0].substring(7, s[0].length() - 1));
             return s.substring(7, s.length() - 1);
         }
 
