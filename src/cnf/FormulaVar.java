@@ -8,7 +8,7 @@ final class FormulaVar extends Formula {
     this.name = name;
   }
 
-  <A> A accept(FormulaVisitor<A> visitor) {
+  public <A> A accept(FormulaVisitor<A> visitor) {
     return visitor.visitVar(this);
   }
 

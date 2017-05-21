@@ -14,7 +14,7 @@ public abstract class Formula {
   // package-private
   Formula() {}
 
-  abstract <A> A accept(FormulaVisitor<A> visitor);
+  public abstract <A> A accept(FormulaVisitor<A> visitor);
 
   /**
    * Wandelt die repraesentierte Formel in einen String um.

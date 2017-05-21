@@ -10,7 +10,7 @@ final class FormulaOr extends Formula {
     this.fms = fms;
   }
 
-  <A> A accept(FormulaVisitor<A> visitor) {
+  public <A> A accept(FormulaVisitor<A> visitor) {
     return visitor.visitOr(this);
   }
 

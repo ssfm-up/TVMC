@@ -9,12 +9,12 @@ import java.util.Set;
 import java.util.TreeSet;
 import static cnf.CNF.*;
 
-class TseitinVisitor implements FormulaVisitor<Integer> {
+public class TseitinVisitor implements FormulaVisitor<Integer> {
 
-  Map<Formula, Integer> fmVars;
+  public Map<Formula, Integer> fmVars;
   Set<Set<Integer>> clauses;
 
-  TseitinVisitor() {
+  public TseitinVisitor() {
     fmVars = new HashMap<Formula, Integer>();
     clauses = new HashSet<Set<Integer>>();
   }
@@ -40,7 +40,7 @@ class TseitinVisitor implements FormulaVisitor<Integer> {
     return and(clfms);
   }
 
-  String getResultDIMACS(Integer x) {
+  public String getResultDIMACS(Integer x) {
     StringBuffer s = new StringBuffer();
     s.append("fm " + (clauses.size() + 1) + " " + nextName + "\n");
     s.append(x + " 0\n");

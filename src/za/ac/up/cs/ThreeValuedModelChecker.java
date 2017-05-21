@@ -24,12 +24,16 @@ public class ThreeValuedModelChecker {
     private static final int TRUE_VAL = 1;
     private static final int UNKNOWN_VAL = 2;
     private final EnumeratorOfCFGraph cfgs;
-    private final Map<String, Var> vars = new HashMap<>();
+    // TODO change to private
+    public final Map<String, Var> vars = new HashMap<>();
     // Used to lookup the number of the predicate
     private final Map<String, Integer> predMap = new HashMap<>();
     private final int maxBound;
     private final int numberOfPreds;
+	// TODO: use a Properties object to store configuration instead
+    private boolean checkFairness = false;
     private final int numberOfProcesses;
+    private Var[][] progress;
 
     public ThreeValuedModelChecker(EnumeratorOfExpression predicates, EnumeratorOfCFGraph cfgs, int maxBound) {
         this.cfgs = cfgs;
@@ -50,9 +54,18 @@ public class ThreeValuedModelChecker {
         predicates.reset();
         cfgs.reset();
         numberOfProcesses = cfgs.getNumberofElements();
+        progress = initialiseProgressFlags();
     }
 
-    // See definition 2 [TGH-Draft-2016]
+    /**
+     * See Definition 7
+     *
+     * @param process
+     * @param loc
+     * @param bound
+     * @param numberOfLocs
+     * @return
+     */
     private Formula encLoc(int process, int loc, int bound, int numberOfLocs) {
         int numOfBinaryDigits = (int) Math.ceil(Math.log(numberOfLocs) / Math.log(2.0));
 
@@ -79,7 +92,9 @@ public class ThreeValuedModelChecker {
         return getNamedVar("l_" + process + "_" + loc + "_" + bound);
     }
 
-    // See definition 2 [TGH-Draft-2016]
+    /**
+     * See definition 8
+     */
     private Formula encPred(int pred, int bound, int value) {
         Formula f1;
         Formula f2;
@@ -104,7 +119,7 @@ public class ThreeValuedModelChecker {
 
     }
 
-    Var predVar(int pred, int bound, boolean known) {
+    private Var predVar(int pred, int bound, boolean known) {
         return getNamedVar("p_" + pred + "_" + bound + "_" + (known ? "b" : "u"));
     }
 
@@ -123,30 +138,202 @@ public class ThreeValuedModelChecker {
         return or(formulas);
     }
 
+    public Formula constructLtlEncoding2() {
+        cfgs.reset();
+        int stateCountPc_0 = cfgs.getNext().getStateCount();
+        int stateCountPc_1 = cfgs.getNext().getStateCount();
+
+        // Finally ( pc_0 = Critical) AND Finally (pc_1 = Critical) ---> Should be true. bound 5
+
+        int critLoc = 3;
+        List<Formula> formulas = new ArrayList<>();
+        for (int bound = 0; bound < maxBound; bound++) {
+            formulas.add(encLoc(0, critLoc, bound, stateCountPc_0));
+        }
+        Formula leftFormula = or(formulas);
+
+        formulas = new ArrayList<>();
+        for (int bound = 0; bound < maxBound; bound++) {
+            formulas.add(encLoc(1, critLoc, bound, stateCountPc_1));
+        }
+        Formula rightFormula = or(formulas);
+
+        return and(leftFormula, rightFormula);
+    }
+
+    // (pc_0=0) /\ (EF((pc_1=WAIT1) /\ (pc_2=WAIT2))) ---> Should be True
+    public Formula constructLtlEncodingMutex2() {
+        cfgs.reset();
+        int stateCountPc_0 = cfgs.getNext().getStateCount();
+        int stateCountPc_1 = cfgs.getNext().getStateCount();
+        int stateCountPc_2 = cfgs.getNext().getStateCount();
+
+        List<Formula> formulas = new ArrayList<>();
+        for (int bound = 0; bound < maxBound; bound++) {
+            int WAIT1 = 7;
+            int WAIT2 = 4;
+            Formula bothProcessesInCritical = and(encLoc(1, WAIT1, bound, stateCountPc_1), encLoc(2, WAIT2, bound, stateCountPc_2));
+//            Formula processZeroAtLocZero = encLoc(0, 0, bound, stateCountPc_0);
+//            formulas.add(and(processZeroAtLocZero, bothProcessesInCritical));
+            formulas.add(bothProcessesInCritical);
+        }
+
+        return or(formulas);
+    }
+
+    /**
+     * Method for calculating F(G(Psi)) where
+     * F is Finally
+     * G is Globally
+     * Psi represents the conjunction of encodings of a predicate
+     * See Definition 11 for further details
+     *
+     * @return Returns encoding formula
+     */
+    public Formula constructLtlEncodingLiveness() {
+        cfgs.reset();
+
+        // Get a reference to the initial process and store its state count
+        CFGraph cfg = cfgs.getNext();
+        // TODO: Check if this shouldn't be cfg.getStateCount() instead
+        int stateCountPc_0 = cfgs.getNext().getStateCount();
+
+        // Define a list of formulas to be used when calculating Finally
+        List<Formula> formulas = new ArrayList<>();
+        // The number of the line of code to be used as the CRITICAL section
+        int CRITICAL = 7;
+
+        for (int r = 0; r < maxBound; r++) {
+            Formula transitionFormula = encodeTransition(cfg, 0, maxBound, r);
+            // Add the result of Globally to the list of formulas
+            // Trans(b,r) /\ ( \/ Encodings )
+            formulas.add(and(transitionFormula, simpleLiveness(0, stateCountPc_0, CRITICAL, r), ufair(r)));
+        }
+        // Return the result of Finally
+        return or(formulas);
+    }
+
+    private Formula simpleLiveness(int process, int stateCount, int CRITICAL, int r) {
+        // Define a list of formulas to be used when calculating Globally
+        List<Formula> globally = new ArrayList<>();
+        for (int k = 0; k < maxBound; k++) {
+            List<Formula> encodings = new ArrayList<>();
+            for (int kprime = Math.min(k, r); kprime < maxBound; kprime++) {
+                encodings.add(encLoc(process, CRITICAL, k, stateCount));
+            }
+            // Add the conjunction of all encodings
+            // Encodings := /\ encLoc
+            globally.add(and(encodings));
+        }
+        return or(globally);
+    }
+
+    /**
+     * Calculates and returns Globally Finally progress[i][k] where i is the process number and k is the current position
+     * of the b-loop
+     * @return
+     */
+    public Formula ufair(int r) {
+        cfgs.reset();
+
+        List<Formula> forAllProcesses = new ArrayList<>();
+        for (int i = 0; i < numberOfProcesses; ++i) {
+            // Define a list of formulas to be used when calculating Finally
+            List<Formula> finallyFormulas = new ArrayList<>();
+            // Finally within the loop
+            for (int k = r; k < maxBound; k++) {
+                finallyFormulas.add(var(progress[i][k]));
+            }
+            forAllProcesses.add(or(finallyFormulas));
+        }
+        return and(forAllProcesses);
+    }
+
     public Formula constructFormulaNotUnknown(Formula ltlPropertyEncoding) {
         cfgs.reset();
         int stateCountPc_0 = cfgs.getNext().getStateCount();
         int stateCountPc_1 = cfgs.getNext().getStateCount();
+        int stateCountPc_2 = cfgs.getNext().getStateCount();
 
-        Formula initialState = and(encLoc(0, 0, 0, stateCountPc_0), encLoc(1, 0, 0, stateCountPc_1), encPred(0, 0, TRUE_VAL));
+        ArrayList<Formula> initialProgressValues = new ArrayList<>();
+        for (int i = 0; i < numberOfProcesses; ++i) {
+            initialProgressValues.add(neg(var(progress[i][0])));
+        }
+
+//        Formula initialState = and(encLoc(0, 0, 0, stateCountPc_0), encLoc(1, 0, 0, stateCountPc_1), encPred(0, 0, TRUE_VAL));
+        Formula initialState = and(
+                encLoc(0, 0, 0, stateCountPc_0),
+                encLoc(1, 0, 0, stateCountPc_1),
+                encLoc(2, 0, 0, stateCountPc_2),
+                encPred(0, 0, TRUE_VAL),
+                encPred(1, 0, TRUE_VAL),
+                encPred(2, 0, TRUE_VAL),
+                encPred(3, 0, TRUE_VAL),
+                encPred(4, 0, TRUE_VAL),
+                encPred(5, 0, FALSE_VAL),
+                // /\ not progress[i][0]
+                and(initialProgressValues)
+        );
+
         Formula transitionEncoding = encodeTransitions(cfgs, maxBound);
+
+        if (checkFairness) {
+            initialState = and(initialState, constructLtlEncodingLiveness());
+        }
+
+        if (ltlPropertyEncoding == null) return and(initialState, transitionEncoding, TRUE, neg(FALSE), neg(UNKNOWN));
 
         return and(initialState, transitionEncoding, ltlPropertyEncoding, TRUE, neg(FALSE), neg(UNKNOWN));
     }
 
-    public Formula constructFormulaUnknown(Formula ltlPropertyEncoding) {
+    // Specific to Mutex Example 2
+    public Formula constructFormulaUnknownMutex2(Formula ltlPropertyEncoding) {
         cfgs.reset();
         int stateCountPc_0 = cfgs.getNext().getStateCount();
         int stateCountPc_1 = cfgs.getNext().getStateCount();
+        int stateCountPc_2 = cfgs.getNext().getStateCount();
 
-        Formula initialState = and(encLoc(0, 0, 0, stateCountPc_0), encLoc(1, 0, 0, stateCountPc_1), encPred(0, 0, TRUE_VAL));
+//        Formula initialState = and(
+//                encLoc(0, 0, 0, stateCountPc_0),
+//                encLoc(1, 0, 0, stateCountPc_1),
+//                encPred(0, 0, TRUE_VAL)
+//        );
+        ArrayList<Formula> initialProgressValues = new ArrayList<>();
+        for (int i = 0; i < numberOfProcesses; ++i) {
+            initialProgressValues.add(neg(var(progress[i][0])));
+        }
+
+        Formula initialState = and(
+                encLoc(0, 0, 0, stateCountPc_0),
+                encLoc(1, 0, 0, stateCountPc_1),
+                encLoc(2, 0, 0, stateCountPc_2),
+                encPred(0, 0, TRUE_VAL),
+                encPred(1, 0, TRUE_VAL),
+                encPred(2, 0, TRUE_VAL),
+                encPred(3, 0, TRUE_VAL),
+                encPred(4, 0, TRUE_VAL),
+                encPred(5, 0, FALSE_VAL),
+                // /\ not progress[i][0]
+                and(initialProgressValues)
+        );
 
         Formula transitionEncoding = encodeTransitions(cfgs, maxBound);
+
+        if (checkFairness) {
+            initialState = and(initialState, constructLtlEncodingLiveness());
+        }
+
+        if (ltlPropertyEncoding == null) return and(initialState, transitionEncoding, TRUE, neg(FALSE), UNKNOWN);
 
         return and(initialState, transitionEncoding, ltlPropertyEncoding, TRUE, neg(FALSE), UNKNOWN);
     }
 
 
+    /**
+     * Check the satisfiability of a formula using Sat4j
+     *
+     * @param formula
+     */
     public void checkSatisfiability(Formula formula) {
         Formula cnfFormula = cnf(formula);
         try {
@@ -168,13 +355,20 @@ public class ThreeValuedModelChecker {
         }
     }
 
-    private void printVars() {
+    public void printVars() {
         System.out.println("Vars:");
         for (Map.Entry<String, Var> e : vars.entrySet()) {
             System.out.println(e.getValue() + " " + e.getKey());
         }
     }
 
+    // TODO: Make difference between these two methods clear - Possibly rename one?
+
+    /**
+     * @param cfgs
+     * @param bound
+     * @return
+     */
     private Formula encodeTransition(EnumeratorOfCFGraph cfgs, int bound) {
         cfgs.reset();
 
@@ -191,6 +385,13 @@ public class ThreeValuedModelChecker {
         return or(formulas);
     }
 
+    /**
+     * See Definition 10
+     *
+     * @param cfgs
+     * @param bound
+     * @return
+     */
     private Formula encodeTransitions(EnumeratorOfCFGraph cfgs, int bound) {
         List<Formula> formulas = new ArrayList<>();
 
@@ -202,14 +403,29 @@ public class ThreeValuedModelChecker {
     }
 
     /**
-     * Encodes the transitions of a single CFG
-     * See definition 3 (Encoding of Transitions)
+     * A special case of encodeTransition where r = bound + 1
      *
-     * @param cfg
-     * @param process
-     * @param bound   @return
+     * @param cfg     The Control Flow Graph representing the application
+     * @param process The unique identifier of the process, ie. the index in the CFG
+     * @param bound   The bound until which the transitions should be encoded
+     * @return A Formula representing the encoded transitions
      */
     private Formula encodeTransition(CFGraph cfg, int process, int bound) {
+        return encodeTransition(cfg, process, bound, bound + 1);
+    }
+
+
+    /**
+     * Encodes the transitions of a single CFG to a certain bound
+     * See definition 3 (Encoding of Transitions)
+     *
+     * @param cfg     The Control Flow Graph representing the application
+     * @param process The unique identifier of the process, ie. the index in the CFG
+     * @param bound   The bound until which the transitions should be encoded
+     * @param r       TODO: Ask Nils for a good explanation of this parameter
+     * @return A Formula representing the encoded transitions
+     */
+    private Formula encodeTransition(CFGraph cfg, int process, int bound, int r) {
         int stateCount = cfg.getStateCount();
         EnumeratorOfState states = cfg.getStates();
         List<Formula> formulas = new LinkedList<Formula>();
@@ -226,14 +442,20 @@ public class ThreeValuedModelChecker {
 
                 int source = transition.getSource();
                 int destination = transition.getDestination();
-                Formula locEncoding = and(encLoc(process, source, bound, stateCount), encLoc(process, destination, bound + 1, stateCount));
+                Formula locEncoding = and(encLoc(process, source, bound, stateCount), encLoc(process, destination, r, stateCount));
                 currentTransEncoding.add(locEncoding);
+
+                // /\ progress[i][k+1]
+                currentTransEncoding.add(var(progress[process][r]));
 
                 for (int i = 0; i < numberOfProcesses; i++) {
                     if (i != process) {
                         // TODO Pass in THAT process's stateCount, not this one's
                         Formula idlingEncoding = idleEncoding(i, stateCount, bound);
                         currentTransEncoding.add(idlingEncoding);
+
+                        // /\ not progress[j][k+1]
+                        currentTransEncoding.add(neg(var(progress[i][r])));
                     }
                 }
 
@@ -255,6 +477,7 @@ public class ThreeValuedModelChecker {
                     Formula notB = parserHelper.parser.LOGIC_PARSER.parse(modifiedB);
                     // choice(a, b) = (a or not b) and (a or b or unknown)
 //                    Formula choiceEncoding = and(or(a, neg(b)), or(a, b, UNKNOWN));
+                    // See Definition 2
                     Formula choiceEncoding = and(or(a, notB), or(a, b, UNKNOWN));
                     currentTransEncoding.add(choiceEncoding);
                 }
@@ -265,11 +488,11 @@ public class ThreeValuedModelChecker {
                 if (!assignments.hasNext()) {
                     predMap.forEach((predStr, pred) -> {
                         Formula pUK = var(predVar(pred, bound, false));
-                        Formula pUKp1 = var(predVar(pred, bound + 1, false));
+                        Formula pUKp1 = var(predVar(pred, r, false));
                         Formula f1 = and(or(neg(pUK), pUKp1), or(pUK, neg(pUKp1)));
 
                         Formula pTK = var(predVar(pred, bound, true));
-                        Formula pTKp1 = var(predVar(pred, bound + 1, true));
+                        Formula pTKp1 = var(predVar(pred, r, true));
                         Formula f2 = and(or(neg(pTK), pTKp1), or(pTK, neg(pTKp1)));
 
                         Formula and = and(f1, f2);
@@ -289,9 +512,9 @@ public class ThreeValuedModelChecker {
                     String predStr = next.__toString().split(":=")[0].trim();
                     Integer pred = predMap.get(predStr);
 
-                    Formula f1 = and(a, encPred(pred, bound + 1, TRUE_VAL));
-                    Formula f2 = and(b, encPred(pred, bound + 1, FALSE_VAL));
-                    Formula f3 = and(and(neg(a), neg(b)), encPred(pred, bound + 1, UNKNOWN_VAL));
+                    Formula f1 = and(a, encPred(pred, r, TRUE_VAL));
+                    Formula f2 = and(b, encPred(pred, r, FALSE_VAL));
+                    Formula f3 = and(and(neg(a), neg(b)), encPred(pred, r, UNKNOWN_VAL));
 
                     Formula or = or(f1, f2, f3);
                     assignmentEncoding.add(or);
@@ -317,13 +540,12 @@ public class ThreeValuedModelChecker {
         return and(formulas);
     }
 
-    Var getNamedVar(String s) {
-        Var x = vars.get(s);
-        if (x == null) {
-            x = freshVar();
-            vars.put(s, x);
+    private Var getNamedVar(String s) {
+        // TODO: Possibly use Map's putIfAbsent method here?
+        if (vars.get(s) == null) {
+            vars.put(s, freshVar());
         }
-        return x;
+        return vars.get(s);
     }
 
     public void test() {
@@ -336,6 +558,32 @@ public class ThreeValuedModelChecker {
         Formula transitionEncoding = encodeTransitions(cfgs, maxBound);
 
         checkSatisfiability(and(initialState, transitionEncoding, TRUE, neg(FALSE), UNKNOWN));
+    }
+
+    /**
+     * Returns an array of ints where the index of the array corresponds to the process number and the value at that
+     * index indicates the number of states for that process
+     *
+     * @return An array of the state counts
+     */
+    private int[] getStateCounts() {
+        cfgs.reset();
+        int[] stateCounts = new int[numberOfProcesses];
+        int index = 0;
+        while (cfgs.hasNext()) {
+            stateCounts[index++] = cfgs.getNext().getStateCount();
+        }
+        cfgs.reset();
+        return stateCounts;
+    }
+
+    private Var[][] initialiseProgressFlags() {
+        Var[][] progressFlags = new Var[numberOfProcesses][maxBound];
+        for (int i = 0; i < numberOfProcesses; ++i) {
+            for (int j = 0; j < maxBound; ++j)
+                progressFlags[i][j] = freshVar();
+        }
+        return progressFlags;
     }
 
     /**

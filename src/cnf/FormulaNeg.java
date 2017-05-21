@@ -8,7 +8,7 @@ final class FormulaNeg extends Formula {
     this.fm = fm;
   }
 
-  <A> A accept(FormulaVisitor<A> visitor) {
+  public <A> A accept(FormulaVisitor<A> visitor) {
     return visitor.visitNeg(this);
   }
 
