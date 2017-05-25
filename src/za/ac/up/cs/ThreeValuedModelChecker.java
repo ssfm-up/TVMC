@@ -358,7 +358,7 @@ public class ThreeValuedModelChecker {
     public void printVars() {
         System.out.println("Vars:");
         for (Map.Entry<String, Var> e : vars.entrySet()) {
-            System.out.println(e.getValue() + " " + e.getKey());
+            System.out.println(e.getValue() + "\t\t" + e.getKey());
         }
     }
 
@@ -395,7 +395,7 @@ public class ThreeValuedModelChecker {
     private Formula encodeTransitions(EnumeratorOfCFGraph cfgs, int bound) {
         List<Formula> formulas = new ArrayList<>();
 
-        for (int i = 0; i < bound; i++) {
+        for (int i = 0; i < bound - 1; i++) {
             formulas.add(encodeTransition(cfgs, i));
         }
 
@@ -541,10 +541,7 @@ public class ThreeValuedModelChecker {
     }
 
     private Var getNamedVar(String s) {
-        // TODO: Possibly use Map's putIfAbsent method here?
-        if (vars.get(s) == null) {
-            vars.put(s, freshVar());
-        }
+        vars.putIfAbsent(s, freshVar());
         return vars.get(s);
     }
 
@@ -578,10 +575,10 @@ public class ThreeValuedModelChecker {
     }
 
     private Var[][] initialiseProgressFlags() {
-        Var[][] progressFlags = new Var[numberOfProcesses][maxBound];
+        Var[][] progressFlags = new Var[numberOfProcesses][maxBound + 1];
         for (int i = 0; i < numberOfProcesses; ++i) {
-            for (int j = 0; j < maxBound; ++j)
-                progressFlags[i][j] = freshVar();
+            for (int j = 0; j < maxBound + 1; ++j)
+                progressFlags[i][j] = getNamedVar("progress_" + i + "_" + j);
         }
         return progressFlags;
     }

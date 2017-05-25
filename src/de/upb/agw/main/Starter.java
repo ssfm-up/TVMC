@@ -404,14 +404,15 @@ public class Starter {
         Formula ltlEncoding = modelChecker.constructLtlEncodingMutex2();
         // Formula ltlEncoding = modelChecker.constructLtlEncodingLiveness();
         System.out.println("ltlEncoding =\n" + ltlEncoding);
-        System.out.println("------------------------------------------");
+        System.out.println("------------------------------------------\n");
         Formula unknownFormula = modelChecker.constructFormulaUnknownMutex2(ltlEncoding);
 //        System.out.println("unknownFormula =\n" + unknownFormula);
         Formula notUnknownFormula = modelChecker.constructFormulaNotUnknown(ltlEncoding);
 //        System.out.println("notUnknownFormula =\n" + notUnknownFormula);
-        System.out.println("------------------------------------------");
+//        System.out.println("------------------------------------------");
         System.out.println("True vars for unknownFormula:");
         modelChecker.checkSatisfiability(unknownFormula);
+        System.out.println();
         System.out.println("True vars for notUnknownFormula:");
         modelChecker.checkSatisfiability(notUnknownFormula);
         System.out.println("------------------------------------------");
@@ -423,7 +424,7 @@ public class Starter {
         Path file = Paths.get("DIMACSVars.txt");
         List<String> lines = new ArrayList<>();
 
-        System.out.println("Vars:");
+        //System.out.println("Vars:");
         List<String> finalLines = lines;
         tseitinVisitor.fmVars.forEach((formula, integer) ->
         {
@@ -436,20 +437,20 @@ public class Starter {
         file = Paths.get("cnfUnknownDIMACS.txt");
         lines = new ArrayList<>();
 
-        System.out.println("cnfUnknown =\n" + cnfUnknown);
+        //System.out.println("cnfUnknown =\n" + cnfUnknown);
         lines.add(cnfUnknown);
         Files.write(file, lines, Charset.forName("UTF-8"));
 
         file = Paths.get("cnfNotUnknownDIMACS.txt");
         lines = new ArrayList<>();
-        System.out.println("------------------------------------------");
+        //System.out.println("------------------------------------------");
         String cnfNotUnknown = cnfDIMACS(notUnknownFormula);
         lines.add(cnfNotUnknown);
         Files.write(file, lines, Charset.forName("UTF-8"));
 
-        System.out.println("cnfNotUnknown =\n" + cnfNotUnknown);
-        System.out.println("------------------------------------------");
+        //System.out.println("cnfNotUnknown =\n" + cnfNotUnknown);
 
+        System.out.println();
         modelChecker.printVars();
 
         //// TEMP ////
