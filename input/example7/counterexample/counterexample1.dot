@@ -1,9 +1,0 @@
-digraph CFG {
-graph [rankdir=LR];
-node [ label = "door1 = F\ndoor2 = F\nexec_4; = F\n" ]; state_0;
-node [ label = "door1 = M\ndoor2 = M\nexec_4; = T\n" ]; state_1;
-start [style = filled, color=black, label="", height=0.12,width=0.12,fontsize=1];
-start -> state_0[ style = "bold"];
-state_0 -> state_1 [ label = T ];
-label="grr";
-}

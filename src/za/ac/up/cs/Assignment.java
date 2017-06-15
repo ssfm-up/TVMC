@@ -1,9 +1,5 @@
 package za.ac.up.cs;
 
-import cnf.Formula;
-
-import java.util.Map;
-
 public class Assignment {
     //private Formula a;
     //private Formula b;
@@ -17,8 +13,18 @@ public class Assignment {
 //        this.predicate = predicate;
 //    }
 
+    public Assignment() {}
+
     public Assignment(Integer predicate, String RHS) {
         this.predicate = predicate;
         this.RHS = RHS;
+    }
+
+    public int getPredicate() {
+        return predicate;
+    }
+
+    public String getRHS() {
+        return RHS;
     }
 }

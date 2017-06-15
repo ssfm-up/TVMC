@@ -30,10 +30,8 @@ public class ParserHelper {
     }
 
     public ParserHelper invoke() {
-//        System.out.println(s + " " + s.length());
         String[] split = s.split(",");
         String s1 = cleanExpression(split[0].substring(7));
-//        System.out.println(split[0].substring(7) + " " + split[0].substring(7).length());
         String s2 = cleanExpression(split[1].substring(0, split[1].length() - 1));
         a = parser.LOGIC_PARSER.parse(s1);
         b = parser.LOGIC_PARSER.parse(s2);

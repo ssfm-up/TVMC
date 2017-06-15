@@ -1,1 +1,0 @@
-EF((pc_0=CRITICAL) /\ (pc_1=CRITICAL))
