@@ -460,7 +460,7 @@ public class MvSetUpsetAlgebra implements IAlgebra
       MvSetUpsetValue result = (MvSetUpsetValue)table.get (lookupValue);
       if (result == null)
 	{
-	  System.out.println ("MvSetUpsetAlgebra: new value: " + (++count));
+	  //System.out.println ("MvSetUpsetAlgebra: new value: " + (++count));
 	  result = new MvSetUpsetValue (MvSetUpsetAlgebra.this, 
 					"", elements.size (), v);
 	  elements.add (result);

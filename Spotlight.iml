@@ -18,53 +18,26 @@
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="inheritedJdk" />
+    <orderEntry type="library" name="jparsec-2.3" level="project" />
     <orderEntry type="module-library">
-      <library name="antlr.jar">
+      <library>
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/antlr.jar!/" />
+          <root url="jar://$MODULE_DIR$/Spotlight.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
+        <excluded>
+          <root url="jar://$MODULE_DIR$/Spotlight.jar!/" />
+        </excluded>
       </library>
     </orderEntry>
-    <orderEntry type="module-library">
-      <library name="grappa1_2.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/grappa1_2.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library name="jlfgr-1_0.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/jlfgr-1_0.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library name="junit.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/junit.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library name="kunststoff.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/kunststoff.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="library" name="KotlinJavaRuntime" level="project" />
+    <orderEntry type="library" name="grappa1_2" level="project" />
+    <orderEntry type="library" name="antlr" level="project" />
     <orderEntry type="library" name="org.sat4j.core" level="project" />
-    <orderEntry type="library" name="jparsec-2.3" level="application" />
+    <orderEntry type="library" name="kunststoff" level="project" />
+    <orderEntry type="library" name="junit" level="project" />
+    <orderEntry type="library" name="jackson-core-2.9.0.pr3" level="project" />
+    <orderEntry type="library" name="jackson-annotations-2.9.0.pr3" level="project" />
+    <orderEntry type="library" name="jackson-databind-2.9.0.pr3" level="project" />
   </component>
 </module>

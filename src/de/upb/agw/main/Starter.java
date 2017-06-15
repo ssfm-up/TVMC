@@ -3,10 +3,14 @@ package de.upb.agw.main;
 import cnf.Formula;
 import cnf.TseitinVisitor;
 import cnf.Var;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import de.upb.agw.analysis.Analyser;
 import de.upb.agw.analysis.ProofAnalyser;
 import de.upb.agw.gui.project.SpotlightProject;
 import de.upb.agw.jni.*;
+import de.upb.agw.jni.Assignment;
 import de.upb.agw.modelchecking.CFGCompiler;
 import de.upb.agw.util.CTLParser;
 import de.upb.agw.util.ProgramCounterEncoder;
@@ -19,10 +23,13 @@ import edu.toronto.cs.proof.LinearWitnessVisitor;
 import edu.toronto.cs.proof.ProofStep;
 import edu.toronto.cs.proof.ProofStepFactory;
 import edu.toronto.cs.proof.SimpleNameGenerator;
-import za.ac.up.cs.ThreeValuedModelChecker;
+import za.ac.up.cs.*;
+import za.ac.up.cs.Process;
+import za.ac.up.cs.Transition;
 
 import javax.swing.*;
 import java.io.BufferedReader;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -60,21 +67,21 @@ public class Starter {
     private static boolean generateBPs = false;
 
     private static void initialise(String filename) throws IOException {
-        System.out.println("Initialising...");
+        //System.out.println("Initialising...");
 
         startTime = System.currentTimeMillis();
 
         System.loadLibrary("Spotlight");
 
-        System.out.println("Parsing c file...");
+        //System.out.println("Parsing c file...");
         long time = System.currentTimeMillis();
         cParser = new CParser("input/" + filename + ".c");
         long timeUsed = (System.currentTimeMillis() - time);
-        System.out.println("Finished parsing c file (" + timeUsed + "ms).");
+        //System.out.println("Finished parsing c file (" + timeUsed + "ms).");
 
         abstractor = new Abstractor();
 
-        System.out.println("Optimising CFGs...");
+        //System.out.println("Optimising CFGs...");
         time = System.currentTimeMillis();
         cfgs = cParser.getCFGEnumerator();
         //displayOutputln(cParser.getInitCFG().__toString());
@@ -88,7 +95,7 @@ public class Starter {
             counter++;
         }
         timeUsed = (System.currentTimeMillis() - time);
-        System.out.println("Finished optimising CFGs (" + timeUsed + "ms).");
+        //System.out.println("Finished optimising CFGs (" + timeUsed + "ms).");
 
 
         //fill spotlightVec
@@ -99,7 +106,7 @@ public class Starter {
 
         abstractor.setInitialiserCFG(cParser.getInitCFG());
 
-        System.out.println("Reading predicates...");
+        //System.out.println("Reading predicates...");
         //add predicates
         Vector<Expression> vec = readPredicates("input/" + filename + ".pred");
         for (Expression pred : vec) {
@@ -109,10 +116,10 @@ public class Starter {
 
         compiler = null;
 
-        System.out.println("Reading CTL...");
+        //System.out.println("Reading CTL...");
         ctlString = readCTLFormula("input/" + filename + ".ctl");
 
-        System.out.println("Finished initialising.");
+        //System.out.println("Finished initialising.");
 
     }
 
@@ -185,7 +192,7 @@ public class Starter {
     }
 
     private static void alterAbstraction(Vector<Expression> newPredicates, Vector<Integer> newProgramIds) {
-        displayOutputln("Altering abstraction...");
+        //displayOutputln("Altering abstraction...");
 
         //fill spotlightVec
         for (int id : newProgramIds) {
@@ -193,7 +200,7 @@ public class Starter {
             abstractor.setSpotlight(id, true);
         }
 
-        displayOutputln("Adding new predicates...");
+        //displayOutputln("Adding new predicates...");
         for (Expression pred : newPredicates) {
             abstractor.addPredicate(pred);
             pred.delete();
@@ -202,20 +209,20 @@ public class Starter {
         if (compiler != null)
             compiler.delete();
 
-        displayOutputln("Abstracting CFGs...");
+        //displayOutputln("Abstracting CFGs...");
         long time = System.currentTimeMillis();
         compiler = new CFGCompiler(cfgs, abstractor, spotlightVec);
         long timeUsed = (System.currentTimeMillis() - time);
         abstractTime += timeUsed;
-        displayOutputln("Finished abstracting CFGs (" + timeUsed + "ms).");
+        //displayOutputln("Finished abstracting CFGs (" + timeUsed + "ms).");
 
-        displayOutputln("Transforming CFGs => Kripke...");
+        //displayOutputln("Transforming CFGs => Kripke...");
         time = System.currentTimeMillis();
         XKripkeStructure structure = compiler.compile();
         //System.out.println(structure.getStatePresenter());
         timeUsed = (System.currentTimeMillis() - time);
         convertTime += timeUsed;
-        displayOutputln("Finished transforming CFGs => Kripke (" + timeUsed + "ms).");
+        //displayOutputln("Finished transforming CFGs => Kripke (" + timeUsed + "ms).");
 
         initValueArray = compiler.getInitValueArray();
 
@@ -224,13 +231,13 @@ public class Starter {
         ProofStepFactory.setSNG(new SimpleNameGenerator());
         ProofStepFactory.setStructure(checker.getXKripke());
 
-        displayOutputln("Initialising CTL parser...");
+        //displayOutputln("Initialising CTL parser...");
         time = System.currentTimeMillis();
         ctlParser = new CTLParser(structure, compiler.getVariableTable(), map, cfgs, compiler.getFairnessMvSets(), compiler.getEncoderMap());
         timeUsed = (System.currentTimeMillis() - time);
-        displayOutputln("Finished initialising CTL parser (" + timeUsed + "ms).");
+        //displayOutputln("Finished initialising CTL parser (" + timeUsed + "ms).");
 
-        displayOutputln("Finished Altering abstraction.");
+        //displayOutputln("Finished Altering abstraction.");
 
         if (generateBPs) {
             displayOutputln("Generating boolean programs...");
@@ -298,8 +305,8 @@ public class Starter {
     }
 
     private static void computeInitSpotlight() {
-        Vector<Expression> newPreds = new Vector<Expression>();
-        Vector<Integer> newSpot = new Vector<Integer>();
+        Vector<Expression> newPreds = new Vector<>();
+        Vector<Integer> newSpot = new Vector<>();
         String ctl = ctlString;
         while (true) {
             int index = ctl.indexOf("pc_");
@@ -311,17 +318,16 @@ public class Starter {
             ctl = ctl.substring(ctl.indexOf("=") + 1);
         }
 
-        displayOutputln("Following programs are added: ");
-        displayOutputln(Collections.list(newSpot.elements()).toString());
+        //displayOutputln("Following programs are added: ");
+        //displayOutputln(Collections.list(newSpot.elements()).toString());
 
         alterAbstraction(newPreds, newSpot);
     }
 
     private static String readCTLFormula(String file) throws IOException {
         BufferedReader reader = new BufferedReader(new FileReader(file));
-        while (reader.ready()) {
-            String expr = reader.readLine();
-            return expr;
+        if (reader.ready()) {
+            return reader.readLine();
         }
         return null;
     }
@@ -375,7 +381,7 @@ public class Starter {
      */
 
     public static void main(String[] args) throws IOException {
-        if (args.length < 1 || args.length > 2) {
+        if (args.length < 1 || args.length > 3) {
             displayOutputln("java -jar Spotlight.jar [flags] [example].");
             displayOutputln("Flags:");
             displayOutputln("-BooleanProgram: When enabled boolean programs are generated for each refinement step.");
@@ -389,33 +395,67 @@ public class Starter {
                 return;
             }
             args[0] = args[1];
+        } else if (args.length == 3) {
+            if (args[0].equalsIgnoreCase("-json") || args[0].equalsIgnoreCase("-j")) {
+                // args["-json", "input/filename", "output/filename"]
+                initialise(args[1]);
+                computeInitSpotlight();
+                //System.out.println(serializeCFG(abstractor.getPredicates(), abstractor.getAbstractedCFGs()));
+                ObjectMapper obj = new ObjectMapper();
+                obj.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
+                obj.writeValue(
+                        new FileOutputStream(args[2]), serializeCFG(abstractor.getPredicates(), abstractor.getAbstractedCFGs()));
+                System.out.println("Exported JSON file to " + args[2]);
+                return;
+            } else {
+                displayOutputln("Unknown flag: " + args[0]);
+                return;
+            }
         }
 
         initialise(args[0]);
-        run();
+        // run();
+        computeInitSpotlight();
+
         EnumeratorOfCFGraph abstractedCFGs = abstractor.getAbstractedCFGs();
         abstractedCFGs.reset();
-        int numberOfProcesses = abstractedCFGs.getNumberofElements();
-        System.out.println("numberOfProcesses = " + numberOfProcesses);
+        //int numberOfProcesses = abstractedCFGs.getNumberofElements();
+        //System.out.println("numberOfProcesses = " + numberOfProcesses);
 
 //        logTimeOfEncoding(abstractedCFGs);
+        int overallTime = 0;
+        long time = System.currentTimeMillis();
+        ThreeValuedModelChecker modelChecker = new ThreeValuedModelChecker(abstractor.getPredicates(), abstractedCFGs, 4);
 
-        ThreeValuedModelChecker modelChecker = new ThreeValuedModelChecker(abstractor.getPredicates(), abstractedCFGs, 7);
-        Formula ltlEncoding = modelChecker.constructLtlEncodingMutex2();
-        // Formula ltlEncoding = modelChecker.constructLtlEncodingLiveness();
-        System.out.println("ltlEncoding =\n" + ltlEncoding);
-        System.out.println("------------------------------------------\n");
-        Formula unknownFormula = modelChecker.constructFormulaUnknownMutex2(ltlEncoding);
-//        System.out.println("unknownFormula =\n" + unknownFormula);
-        Formula notUnknownFormula = modelChecker.constructFormulaNotUnknown(ltlEncoding);
-//        System.out.println("notUnknownFormula =\n" + notUnknownFormula);
-//        System.out.println("------------------------------------------");
-        System.out.println("True vars for unknownFormula:");
+        displayOutputln("Encoding formula...");
+        //Formula ltlEncoding = modelChecker.constructLtlEncodingMutex2();
+        Formula ltlEncoding = null;
+        Formula formula = modelChecker.constructFormula(ltlEncoding);
+        Formula unknownFormula = modelChecker.getUnknownFormula(formula);
+        Formula notUnknownFormula = modelChecker.getNotUnknownFormula(formula);
+        long timeUsed = (System.currentTimeMillis() - time);
+        overallTime += timeUsed;
+        displayOutputln("Finished encoding formula (" + timeUsed + "ms).");
+
+        displayOutputln("");
+        displayOutputln("Checking satisfiability...");
+        displayOutput("Unknown Formula: ");
+        time = System.currentTimeMillis();
         modelChecker.checkSatisfiability(unknownFormula);
+        timeUsed = (System.currentTimeMillis() - time);
+        overallTime += timeUsed;
+        displayOutputln("Finished checking unknown formula (" + timeUsed + "ms).");
         System.out.println();
-        System.out.println("True vars for notUnknownFormula:");
+
+        displayOutput("Not Unknown Formula: ");
+        time = System.currentTimeMillis();
         modelChecker.checkSatisfiability(notUnknownFormula);
-        System.out.println("------------------------------------------");
+        timeUsed = (System.currentTimeMillis() - time);
+        overallTime += timeUsed;
+        displayOutputln("Finished checking not unknown formula (" + timeUsed + "ms).");
+        displayOutputln("");
+
+        displayOutputln("Total time: " + overallTime + "ms");
         TseitinVisitor tseitinVisitor = new TseitinVisitor();
         Integer x = unknownFormula.accept(tseitinVisitor);
         String cnfUnknown = tseitinVisitor.getResultDIMACS(x);
@@ -424,13 +464,8 @@ public class Starter {
         Path file = Paths.get("DIMACSVars.txt");
         List<String> lines = new ArrayList<>();
 
-        //System.out.println("Vars:");
         List<String> finalLines = lines;
-        tseitinVisitor.fmVars.forEach((formula, integer) ->
-        {
-            finalLines.add(formula + " " + integer);
-//            System.out.println(formula + " " + integer);
-        });
+        tseitinVisitor.fmVars.forEach((fmla, integer) -> finalLines.add(fmla + " " + integer));
         Files.write(file, lines, Charset.forName("UTF-8"));
 
 //        String cnfUnknown = cnfDIMACS(unknownFormula);
@@ -453,83 +488,143 @@ public class Starter {
         System.out.println();
         modelChecker.printVars();
 
-        //// TEMP ////
-        file = Paths.get("DIMACSVarsOtherMapping.txt");
-        Map<String, Var> vars = modelChecker.vars;
-        lines = new ArrayList<>();
-        List<String> finalLines1 = lines;
-        tseitinVisitor.fmVars.forEach((formula, integer) ->
-        {
-            for (Map.Entry<String, Var> e : vars.entrySet()) {
-                if (formula.toString().equals(e.getValue().toString())) {
-                    System.out.println("XXX: " + e.getKey()+ " " + integer);
-                    finalLines1.add(e.getKey()+ " " + integer);
-                }
-            }
-
-//            System.out.println(formula + " " + integer);
-        });
-        Files.write(file, finalLines1, Charset.forName("UTF-8"));
-
-
+//        //// TEMP ////
+//        file = Paths.get("DIMACSVarsOtherMapping.txt");
+//        Map<String, Var> vars = modelChecker.vars;
+//        lines = new ArrayList<>();
+//        List<String> finalLines1 = lines;
+//        tseitinVisitor.fmVars.forEach((formula, integer) ->
+//        {
+//            for (Map.Entry<String, Var> e : vars.entrySet()) {
+//                if (formula.toString().equals(e.getValue().toString())) {
+//                    System.out.println("XXX: " + e.getKey()+ " " + integer);
+//                    finalLines1.add(e.getKey()+ " " + integer);
+//                }
+//            }
+//
+////            System.out.println(formula + " " + integer);
+//        });
+//        Files.write(file, finalLines1, Charset.forName("UTF-8"));
 
 
         ////////////
         cleanup();
     }
 
-    private static void logTimeOfEncoding(EnumeratorOfCFGraph abstractedCFGs) throws IOException {
-        int iterations = 8;
-        Path file = Paths.get("the-file-name.txt");
-        List<String> lines = new ArrayList<>();
-        lines.add("Init time,LTL formula encoding time,Unknown construction time,Not unknown construction time,Unknown SAT checking time,Not unknown SAT checking time");
-        for (int i = 0; i < iterations; i++) {
-            String line = "";
-
-            // Init
-            long time = System.currentTimeMillis();
-            ThreeValuedModelChecker modelChecker = new ThreeValuedModelChecker(abstractor.getPredicates(), abstractedCFGs, i);
-            long timeUsed = (System.currentTimeMillis() - time);
-            line += timeUsed + ",";
-
-            // LTL formula encoding time
-            time = System.currentTimeMillis();
-            Formula ltlEncoding = modelChecker.constructLtlEncodingMutex2();
-            timeUsed = (System.currentTimeMillis() - time);
-            line += timeUsed + ",";
-
-            // Unknown construction time
-            time = System.currentTimeMillis();
-            Formula unknownFormula = modelChecker.constructFormulaUnknownMutex2(ltlEncoding);
-            timeUsed = (System.currentTimeMillis() - time);
-            line += timeUsed + ",";
-
-            // Not unknown construction time
-            time = System.currentTimeMillis();
-            Formula notUnknownFormula = modelChecker.constructFormulaNotUnknown(ltlEncoding);
-            timeUsed = (System.currentTimeMillis() - time);
-            line += timeUsed + ",";
-
-            // Unknown SAT checking time"
-            time = System.currentTimeMillis();
-            modelChecker.checkSatisfiability(unknownFormula);
-            timeUsed = (System.currentTimeMillis() - time);
-            line += timeUsed + ",";
-
-            // Not unknown SAT checking time"
-            time = System.currentTimeMillis();
-            modelChecker.checkSatisfiability(notUnknownFormula);
-            timeUsed = (System.currentTimeMillis() - time);
-            line += timeUsed;
-
-            lines.add(line);
+    private static CFG serializeCFG(EnumeratorOfExpression predicates, EnumeratorOfCFGraph cfgs) {
+        // Build a map of predicates to a unique identifier
+        Map<String, Integer> predMap = new HashMap<>();
+        int i = 0;
+        predicates.reset();
+        while (predicates.hasNext()) {
+            Expression next = predicates.getNext();
+            predMap.put(next.__toString(), i);
+            i++;
         }
-        Files.write(file, lines, Charset.forName("UTF-8"));
+
+        // Build a list of the processes
+        cfgs.reset();
+        List<Process> processes = new ArrayList<>();
+        while (cfgs.hasNext()) {
+            CFGraph process = cfgs.getNext();
+
+            // Build a list of states for each process
+            List<za.ac.up.cs.State> stateList = new ArrayList<>();
+            EnumeratorOfState states = process.getStates();
+            while (states.hasNext()) {
+                de.upb.agw.jni.State state = states.getNext();
+
+                // Build a list of transitions for each state
+                List<za.ac.up.cs.Transition> transitionList = new ArrayList<>();
+                EnumeratorOfTransition transitions = state.getTransitions();
+                while (transitions.hasNext()) {
+                    de.upb.agw.jni.Transition transition = transitions.getNext();
+                    int source = transition.getSource();
+                    int destination = transition.getDestination();
+                    Operation operation = transition.getOperation();
+
+                    // Get the transition guard if there is one
+                    Expression condExpr = operation.getCondExpr();
+                    String guard = null;
+                    if (condExpr != null) {
+                        guard = condExpr.__toString();
+                    }
+
+                    List<za.ac.up.cs.Assignment> assignmentList = new ArrayList<>();
+                    //LogicParser parser = new LogicParser(predMap, vars, TRUE, FALSE, UNKNOWN, bound);
+                    EnumeratorOfAssignment assignments = operation.getAssignments();
+                    while (assignments.hasNext()) {
+                        Assignment next = assignments.getNext();
+                        String RHS = next.getAssignmentExpression().__toString();
+                        String predStr = next.__toString().split(":=")[0].trim();
+                        Integer pred = predMap.get(predStr);
+                        assignmentList.add(new za.ac.up.cs.Assignment(pred, RHS));
+                    }
+                    transitionList.add(new za.ac.up.cs.Transition(source, destination, guard, assignmentList));
+                }
+
+                stateList.add(new za.ac.up.cs.State(transitionList));
+            }
+
+            Process p = new Process(stateList);
+            processes.add(p);
+        }
+        return new CFG(predMap, processes);
     }
+
+    //TODO: Update this code to work with the single formula construction
+//    private static void logTimeOfEncoding(EnumeratorOfCFGraph abstractedCFGs) throws IOException {
+//        int iterations = 8;
+//        Path file = Paths.get("the-file-name.txt");
+//        List<String> lines = new ArrayList<>();
+//        lines.add("Init time,LTL formula encoding time,Unknown construction time,Not unknown construction time,Unknown SAT checking time,Not unknown SAT checking time");
+//        for (int i = 0; i < iterations; i++) {
+//            String line = "";
+//
+//            // Init
+//            long time = System.currentTimeMillis();
+//            ThreeValuedModelChecker modelChecker = new ThreeValuedModelChecker(abstractor.getPredicates(), abstractedCFGs, i);
+//            long timeUsed = (System.currentTimeMillis() - time);
+//            line += timeUsed + ",";
+//
+//            // LTL formula encoding time
+//            time = System.currentTimeMillis();
+//            Formula ltlEncoding = modelChecker.constructLtlEncodingMutex2();
+//            timeUsed = (System.currentTimeMillis() - time);
+//            line += timeUsed + ",";
+//
+//            // Unknown construction time
+//            time = System.currentTimeMillis();
+//            Formula unknownFormula = modelChecker.constructFormulaUnknownMutex2(ltlEncoding);
+//            timeUsed = (System.currentTimeMillis() - time);
+//            line += timeUsed + ",";
+//
+//            // Not unknown construction time
+//            time = System.currentTimeMillis();
+//            Formula notUnknownFormula = modelChecker.constructFormulaNotUnknown(ltlEncoding);
+//            timeUsed = (System.currentTimeMillis() - time);
+//            line += timeUsed + ",";
+//
+//            // Unknown SAT checking time"
+//            time = System.currentTimeMillis();
+//            modelChecker.checkSatisfiability(unknownFormula);
+//            timeUsed = (System.currentTimeMillis() - time);
+//            line += timeUsed + ",";
+//
+//            // Not unknown SAT checking time"
+//            time = System.currentTimeMillis();
+//            modelChecker.checkSatisfiability(notUnknownFormula);
+//            timeUsed = (System.currentTimeMillis() - time);
+//            line += timeUsed;
+//
+//            lines.add(line);
+//        }
+//        Files.write(file, lines, Charset.forName("UTF-8"));
+//    }
 
 	
 	/*private static void showCounterExampleTree2(CTLNode ctl, AlgebraValue value) {
-		// -- the initial state where the proof starts
+        // -- the initial state where the proof starts
 		MvSet initState = checker.getXKripke().getInit();
 		MvSetModelChecker mc = checker;
 
@@ -573,7 +668,7 @@ public class Starter {
 	}*/	
 
 	/*private static AbstractSet<Integer> readSpotlight(String file) throws IOException {
-		AbstractSet<Integer> set = new HashSet<Integer>();
+        AbstractSet<Integer> set = new HashSet<Integer>();
 		
 		BufferedReader reader = new BufferedReader(new FileReader(file));
 		while(reader.ready()) {	

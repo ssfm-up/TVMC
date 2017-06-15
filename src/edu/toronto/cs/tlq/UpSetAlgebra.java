@@ -585,7 +585,7 @@ public class UpSetAlgebra implements DeMorganAlgebra
       
       if (result == null)
 	{
-	  System.out.println ("UpSetAlgebra: new value: " + (++count));
+	  //System.out.println ("UpSetAlgebra: new value: " + (++count));
 	  int[] newData = new int [len];
 	  System.arraycopy (data, 0, newData, 0, len);
 	  result = new UpSetValue (algebra, "", elements.size (), 

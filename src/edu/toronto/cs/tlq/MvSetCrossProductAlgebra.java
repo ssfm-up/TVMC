@@ -99,7 +99,7 @@ public class MvSetCrossProductAlgebra implements DeMorganAlgebra
     CrossProductValue result = (CrossProductValue)uniqueTable.get (v);
     if (result == null)
       {
-	System.out.println ("CPAlgebra: new value: " + (++count));
+	// System.out.println ("CPAlgebra: new value: " + (++count));
 	result = v;
 	uniqueTable.put (result, result);
       }

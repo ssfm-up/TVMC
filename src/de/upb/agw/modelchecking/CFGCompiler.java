@@ -251,7 +251,7 @@ public class CFGCompiler {
 	}
 	
 	private MvSet convertToMvSet(CFGraph graph) {
-		System.out.println("Converting CFGraph " + graph.__toString());
+		// System.out.println("Converting CFGraph " + graph.__toString());
 		MvSet set = mvSetFactory.createConstant(algebra.bot());
 		EnumeratorOfState states = graph.getStates();
 		
@@ -447,7 +447,7 @@ public class CFGCompiler {
 			Expression pred = predicates.getNext();
 			
 			
-			System.err.println(pred.getExpressionCString());
+			// System.err.println(pred.getExpressionCString());
 			String predicateString = pred.getExpressionCString();
 			int value = abstractor.getPredicateInitValue(pred);
 			AlgebraValue algebraValue;
