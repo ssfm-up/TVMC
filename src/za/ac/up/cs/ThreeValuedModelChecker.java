@@ -22,16 +22,16 @@ public class ThreeValuedModelChecker {
     // Used to lookup the number of the predicate
     private final Map<String, Integer> predMap = new HashMap<>();
     private final int maxBound;
-    //private final int numberOfPreds;
     // TODO: use a Properties object to store configuration instead
     private boolean checkFairness = true;
-    //private final int numberOfProcesses;
     private Var[][] progress;
+    private Properties config;
 
-    public ThreeValuedModelChecker(CFG cfgs, int maxBound) {
+    public ThreeValuedModelChecker(CFG cfgs, int maxBound, Properties config) {
         this.cfgs = cfgs;
         this.maxBound = maxBound;
         this.predMap.putAll(cfgs.getPredicates());
+        this.config = config;
         progress = initialiseProgressFlags();
     }
 

@@ -5,10 +5,12 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
+import java.util.Properties;
 
 public class Main {
+
+    final static String CONFIG_FILE = "config.properties";
 
     public static void main(String[] args) {
         if (args.length != 2) {
@@ -22,9 +24,11 @@ public class Main {
             File file = new File(args[0]);
             CFG cfg = objectMapper.readValue(file, CFG.class);
 
+            Properties config = loadConfigurationFile();
+
             int overallTime = 0;
             long time = System.currentTimeMillis();
-            ThreeValuedModelChecker modelChecker = new ThreeValuedModelChecker(cfg, Integer.valueOf(args[1]));
+            ThreeValuedModelChecker modelChecker = new ThreeValuedModelChecker(cfg, Integer.valueOf(args[1]), config);
 
             System.out.println("Encoding formula...");
             Formula ltlEncoding = null;
@@ -63,6 +67,33 @@ public class Main {
 
     private static void printUsage() {
         System.out.println("USAGE: inputfile.json <maxBound>");
+    }
+
+    /**
+     * Loads the properties file, config.properties, if it exists otherwise writes one with default values and returns it
+     *
+     * @return A Properties object containing the program configuration
+     */
+    private static Properties loadConfigurationFile() {
+        Properties prop = new Properties();
+        InputStream input = null;
+
+        try {
+            input = new FileInputStream(CONFIG_FILE);
+            prop.load(input);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (input != null) {
+                try {
+                    input.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return prop;
     }
 
 }
