@@ -1,14 +1,74 @@
 package za.ac.up.cs;
 
+import cnf.Formula;
+
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+
+import static cnf.CNF.*;
 
 public class Process {
     private List<State> states;
 
-    public Process() {}
+    public Process() {
+    }
 
     public Process(List<State> states) {
         this.states = states;
+    }
+
+    Formula getEncoding(ThreeValuedModelChecker mc, int process, int bound, int r, LogicParser parser) {
+        List<Formula> formulas = new LinkedList<>();
+        for (State state : getStates()) {
+            for (Transition transition : state.getTransitions()) {
+                List<Formula> currentTransEncoding = new LinkedList<>();
+
+                int source = transition.getSource();
+                int destination = transition.getDestination();
+                Formula locEncoding = and(mc.encLoc(process, source, bound, getStateCount()), mc.encLoc(process, destination, r, getStateCount()));
+                currentTransEncoding.add(locEncoding);
+
+                // TODO: Check if this condition and loop below it should be done for each transition
+                if (mc.checkFairness) {
+                    // /\ progress[i] [k+1]
+                    currentTransEncoding.add(var(mc.progress[process][r]));
+                }
+
+                for (int i = 0; i < mc.cfgs.getNumberOfProcesses(); i++) {
+                    if (i != process) {
+                        Formula idlingEncoding = idleTransitionEncoding(mc, i, mc.cfgs.getProcess(i).getStateCount(), bound);
+                        currentTransEncoding.add(idlingEncoding);
+
+                        if (mc.checkFairness) {
+                            // /\ not progress[j][k+1]
+                            currentTransEncoding.add(neg(var(mc.progress[i][r])));
+                        }
+                    }
+                }
+
+                if (transition.hasGuard()) {
+                    currentTransEncoding.add(transition.getGuardEncoding(mc, parser));
+                }
+
+                currentTransEncoding.addAll(transition.getAssignmentEncodings(mc, parser, bound, r));
+
+                formulas.add(and(currentTransEncoding));
+            }
+        }
+        return or(formulas);
+    }
+
+    private Formula idleTransitionEncoding(ThreeValuedModelChecker mc, int process, int stateCount, int bound) {
+        List<Formula> formulas = new ArrayList<>();
+
+        for (int i = 0; i < stateCount; i++) {
+            Formula a = mc.encLoc(process, i, bound, stateCount);
+            Formula b = mc.encLoc(process, i, bound + 1, stateCount);
+            formulas.add(iff(a, b));
+        }
+
+        return and(formulas);
     }
 
     public List<State> getStates() {
