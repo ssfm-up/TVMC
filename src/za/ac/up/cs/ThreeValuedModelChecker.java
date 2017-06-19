@@ -43,7 +43,7 @@ public class ThreeValuedModelChecker {
      * @param numberOfLocs
      * @return
      */
-    Formula encLoc(int process, int loc, int bound, int numberOfLocs) {
+    Formula encodeLocation(int process, int loc, int bound, int numberOfLocs) {
         int numOfBinaryDigits = (int) Math.ceil(Math.log(numberOfLocs) / Math.log(2.0));
 
         List<Formula> formulas = new LinkedList<>();
@@ -72,7 +72,7 @@ public class ThreeValuedModelChecker {
     /**
      * See definition 8
      */
-    Formula encPred(int pred, int bound, int value) {
+    Formula encodePredicate(int pred, int bound, int value) {
         Formula f1;
         Formula f2;
         switch (value) {
@@ -116,8 +116,8 @@ public class ThreeValuedModelChecker {
         // Define a list of formulas to be used when calculating Finally
         List<Formula> formulas = new ArrayList<>();
 
-        for (int r = 0; r < maxBound; r++) {
-            Formula transitionFormula = encodeTransition(cfg, 0, maxBound, r);
+        for (int r = 0; r <= maxBound; r++) {
+            Formula transitionFormula = encodeTransition(cfg, process, maxBound, r);
             // Add the result of Globally to the list of formulas
             // Trans(b,r) /\ ( \/ Encodings )
             formulas.add(and(transitionFormula, simpleLiveness(process, processStateCount, CRITICAL, r), ufair(r)));
@@ -129,13 +129,13 @@ public class ThreeValuedModelChecker {
     private Formula simpleLiveness(int process, int stateCount, int CRITICAL, int r) {
         // Define a list of formulas to be used when calculating Globally
         List<Formula> globally = new ArrayList<>();
-        for (int k = 0; k < maxBound; k++) {
+        for (int k = 0; k <= maxBound; k++) {
             List<Formula> encodings = new ArrayList<>();
-            for (int kprime = Math.min(k, r); kprime < maxBound; kprime++) {
-                encodings.add(encLoc(process, CRITICAL, k, stateCount));
+            for (int kprime = Math.min(k, r); kprime <= maxBound; kprime++) {
+                encodings.add(encodeLocation(process, CRITICAL, kprime, stateCount));
             }
             // Add the conjunction of all encodings
-            // Encodings := /\ encLoc
+            // Encodings := /\ encodeLocation
             globally.add(and(encodings));
         }
         return or(globally);
@@ -153,7 +153,7 @@ public class ThreeValuedModelChecker {
             // Define a list of formulas to be used when calculating Finally
             List<Formula> finallyFormulas = new ArrayList<>();
             // Finally within the loop
-            for (int k = r; k < maxBound; k++) {
+            for (int k = r; k <= maxBound; k++) {
                 finallyFormulas.add(var(progress[i][k]));
             }
             forAllProcesses.add(or(finallyFormulas));
@@ -167,13 +167,13 @@ public class ThreeValuedModelChecker {
 
         List<Process> processes = cfgs.getProcesses();
         for (int i = 0; i < processes.size(); ++i) {
-            initialState.add(encLoc(i, 0, 0, processes.get(i).getStateCount()));
+            initialState.add(encodeLocation(i, 0, 0, processes.get(i).getStateCount()));
             if (checkFairness) initialProgressValues.add(neg(var(progress[i][0])));
         }
 
         predMap.forEach((predStr, pred) -> {
             // TODO: Extend to support more types of predicates, not just semaphores
-            initialState.add(encPred(pred, 0, predStr.contains("-1") ? TRUE_VAL : FALSE_VAL));
+            initialState.add(encodePredicate(pred, 0, predStr.contains("-1") ? TRUE_VAL : FALSE_VAL));
         });
 
         if (checkFairness) initialState.add(and(initialProgressValues));
@@ -247,7 +247,7 @@ public class ThreeValuedModelChecker {
      */
     private Formula encodeTransitions(CFG cfgs, int bound) {
         List<Formula> formulas = new ArrayList<>();
-        for (int i = 0; i < bound - 1; i++) {
+        for (int i = 0; i < bound; i++) {
 
             List<Formula> processTransitions = new ArrayList<>();
             List<Process> processes = cfgs.getProcesses();

@@ -26,7 +26,7 @@ public class Process {
 
                 int source = transition.getSource();
                 int destination = transition.getDestination();
-                Formula locEncoding = and(mc.encLoc(process, source, bound, getStateCount()), mc.encLoc(process, destination, r, getStateCount()));
+                Formula locEncoding = and(mc.encodeLocation(process, source, bound, getStateCount()), mc.encodeLocation(process, destination, r, getStateCount()));
                 currentTransEncoding.add(locEncoding);
 
                 // TODO: Check if this condition and loop below it should be done for each transition
@@ -37,7 +37,7 @@ public class Process {
 
                 for (int i = 0; i < mc.cfgs.getNumberOfProcesses(); i++) {
                     if (i != process) {
-                        Formula idlingEncoding = idleTransitionEncoding(mc, i, mc.cfgs.getProcess(i).getStateCount(), bound);
+                        Formula idlingEncoding = idleTransitionEncoding(mc, i, bound, r, mc.cfgs.getProcess(i).getStateCount());
                         currentTransEncoding.add(idlingEncoding);
 
                         if (mc.checkFairness) {
@@ -59,12 +59,12 @@ public class Process {
         return or(formulas);
     }
 
-    private Formula idleTransitionEncoding(ThreeValuedModelChecker mc, int process, int stateCount, int bound) {
+    private Formula idleTransitionEncoding(ThreeValuedModelChecker mc, int process, int bound, int r, int stateCount) {
         List<Formula> formulas = new ArrayList<>();
 
         for (int i = 0; i < stateCount; i++) {
-            Formula a = mc.encLoc(process, i, bound, stateCount);
-            Formula b = mc.encLoc(process, i, bound + 1, stateCount);
+            Formula a = mc.encodeLocation(process, i, bound, stateCount);
+            Formula b = mc.encodeLocation(process, i, r, stateCount);
             formulas.add(iff(a, b));
         }
 

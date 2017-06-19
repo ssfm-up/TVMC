@@ -62,9 +62,9 @@ public class Transition {
             Integer pred = assignment.getPredicate();
             assignedPredicates.add(pred);
 
-            Formula f1 = and(a, mc.encPred(pred, r, ThreeValuedModelChecker.TRUE_VAL));
-            Formula f2 = and(b, mc.encPred(pred, r, ThreeValuedModelChecker.FALSE_VAL));
-            Formula f3 = and(and(neg(a), neg(b)), mc.encPred(pred, r, ThreeValuedModelChecker.UNKNOWN_VAL));
+            Formula f1 = and(a, mc.encodePredicate(pred, r, ThreeValuedModelChecker.TRUE_VAL));
+            Formula f2 = and(b, mc.encodePredicate(pred, r, ThreeValuedModelChecker.FALSE_VAL));
+            Formula f3 = and(and(neg(a), neg(b)), mc.encodePredicate(pred, r, ThreeValuedModelChecker.UNKNOWN_VAL));
 
             Formula or = or(f1, f2, f3);
             assignmentEncodings.add(or);
