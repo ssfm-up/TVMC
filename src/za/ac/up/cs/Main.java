@@ -19,47 +19,63 @@ public class Main {
         }
 
         try {
+            System.out.println(new java.util.Date());
+            int maxBound = Integer.valueOf(args[1]);
+            System.out.println("Max Bound: " + maxBound);
             ObjectMapper objectMapper = new ObjectMapper();
             objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
             File file = new File(args[0]);
             CFG cfg = objectMapper.readValue(file, CFG.class);
 
             Properties config = loadConfigurationFile();
-
-            int overallTime = 0;
-            long time = System.currentTimeMillis();
-            ThreeValuedModelChecker modelChecker = new ThreeValuedModelChecker(cfg, Integer.valueOf(args[1]), config);
-
-            System.out.println("Encoding formula...");
-            Formula ltlEncoding = null;
-            Formula formula = modelChecker.constructFormula(ltlEncoding);
-            Formula unknownFormula = modelChecker.getUnknownFormula(formula);
-            Formula notUnknownFormula = modelChecker.getNotUnknownFormula(formula);
-            long timeUsed = (System.currentTimeMillis() - time);
-            overallTime += timeUsed;
-            System.out.println("Finished encoding formula (" + timeUsed + "ms).");
-
             System.out.println();
-            System.out.println("Checking satisfiability...");
-            System.out.print("Unknown Formula: ");
-            time = System.currentTimeMillis();
-            modelChecker.checkSatisfiability(unknownFormula);
-            timeUsed = (System.currentTimeMillis() - time);
-            overallTime += timeUsed;
-            System.out.println("Finished checking unknown formula (" + timeUsed + "ms).");
-            System.out.println();
+            for (int bound = 1; bound <= maxBound; ++bound) {
+                System.out.println("Performing model checking at bound " + bound);
+                int overallTime = 0;
+                long time = System.currentTimeMillis();
+                ThreeValuedModelChecker modelChecker = new ThreeValuedModelChecker(cfg, bound, config);
 
-            System.out.print("Not Unknown Formula: ");
-            time = System.currentTimeMillis();
-            modelChecker.checkSatisfiability(notUnknownFormula);
-            timeUsed = (System.currentTimeMillis() - time);
-            overallTime += timeUsed;
-            System.out.println("Finished checking not unknown formula (" + timeUsed + "ms).");
-            System.out.println();
+                System.out.println("Encoding formula...");
+                Formula ltlEncoding = null;
+                Formula formula = modelChecker.constructFormula(ltlEncoding);
+                Formula unknownFormula = modelChecker.getUnknownFormula(formula);
+                Formula notUnknownFormula = modelChecker.getNotUnknownFormula(formula);
+                long timeUsed = (System.currentTimeMillis() - time);
+                overallTime += timeUsed;
+                System.out.println("Finished encoding formula (" + timeUsed + "ms).");
 
-            System.out.println("Total time: " + overallTime + "ms");
+                System.out.println();
+                System.out.println("Checking satisfiability...");
+                System.out.print("Unknown Formula: ");
+                time = System.currentTimeMillis();
+                boolean unknownSatisfiable = modelChecker.checkSatisfiability(unknownFormula);
+                timeUsed = (System.currentTimeMillis() - time);
+                overallTime += timeUsed;
+                System.out.println("Finished checking unknown formula (" + timeUsed + "ms).");
+                System.out.println();
 
-            modelChecker.printVars();
+                System.out.print("Not Unknown Formula: ");
+                time = System.currentTimeMillis();
+                boolean notUnknownSatisfiable = modelChecker.checkSatisfiability(notUnknownFormula);
+                timeUsed = (System.currentTimeMillis() - time);
+                overallTime += timeUsed;
+                System.out.println("Finished checking not unknown formula (" + timeUsed + "ms).");
+                System.out.println();
+
+                System.out.println("Total time: " + overallTime + "ms");
+                if (unknownSatisfiable && !notUnknownSatisfiable) {
+                    System.out.println();
+                    modelChecker.printVars();
+                    System.out.println("Refinement necessary. Exiting...");
+                    return;
+                }
+                else if (unknownSatisfiable && notUnknownSatisfiable) {
+                    System.out.println();
+                    modelChecker.printVars();
+                    System.out.println("Error found. Exiting...");
+                    return;
+                }
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
