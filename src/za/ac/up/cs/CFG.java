@@ -1,12 +1,11 @@
 package za.ac.up.cs;
 
-import java.io.Serializable;
-
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,8 +37,25 @@ public class CFG implements Serializable {
         return null;
     }
 
+    int getPredicate(String key) {
+        return predicates.get(key);
+    }
+
+    public String getPredicateString(int value) {
+        for (Map.Entry<String, Integer> entry : predicates.entrySet()) {
+            if (value == entry.getValue()) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
     public int getNumberOfProcesses() {
         return processes.size();
+    }
+
+    int getNumberOfPredicates() {
+        return predicates.size();
     }
 
     @Override

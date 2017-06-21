@@ -205,25 +205,40 @@ public class ThreeValuedModelChecker {
      * @param formula
      * The formula to be checked
      */
-    void checkSatisfiability(Formula formula) {
+    boolean checkSatisfiability(Formula formula) {
         Formula cnfFormula = cnf(formula);
         try {
             Set<Var> trueVars = CNF.satisfiable(cnfFormula);
             if (trueVars != null) {
                 System.out.println("SATISFIABLE");
                 System.out.println("True Variables:");
+                Path executionPath = new Path(cfgs, maxBound);
                 for (String key : new TreeSet<>(vars.keySet())) {
                     if (trueVars.contains(vars.get(key))) {
+                        if (key.startsWith("p_")) {
+                            executionPath.addPredicate(key);
+                        }
+                        else if (key.startsWith("l_")) {
+                            executionPath.addLocation(key);
+                        }
+                        else {
+                            executionPath.addProgressStep(key);
+                        }
                         System.out.println(key);
                     }
                 }
+                System.out.println();
+                System.out.println(executionPath);
+                return true;
             } else {
                 System.out.println("NOT SATISFIABLE");
+                return false;
             }
 
         } catch (TimeoutException e) {
             e.printStackTrace();
         }
+        return false;
     }
 
     /**
