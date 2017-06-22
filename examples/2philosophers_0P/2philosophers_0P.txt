@@ -1,54 +1,54 @@
-Thu Jun 22 00:43:21 SAST 2017
+Thu Jun 22 00:45:01 SAST 2017
 Max Bound: 64
 
 Performing model checking at bound 1
 Encoding formula...
-Finished encoding formula (236ms).
+Finished encoding formula (259ms).
 
 Checking satisfiability...
 Unknown Formula: NOT SATISFIABLE
-Finished checking unknown formula (205ms).
+Finished checking unknown formula (206ms).
 
 Not Unknown Formula: NOT SATISFIABLE
-Finished checking not unknown formula (47ms).
+Finished checking not unknown formula (44ms).
 
-Total time for bound 1: 488ms
+Total time for bound 1: 509ms
 
 =============================================================================
 
 Performing model checking at bound 2
 Encoding formula...
-Finished encoding formula (47ms).
+Finished encoding formula (62ms).
 
 Checking satisfiability...
 Unknown Formula: NOT SATISFIABLE
-Finished checking unknown formula (67ms).
+Finished checking unknown formula (64ms).
 
 Not Unknown Formula: NOT SATISFIABLE
-Finished checking not unknown formula (85ms).
+Finished checking not unknown formula (80ms).
 
-Total time for bound 2: 199ms
+Total time for bound 2: 206ms
 
 =============================================================================
 
 Performing model checking at bound 3
 Encoding formula...
-Finished encoding formula (48ms).
+Finished encoding formula (57ms).
 
 Checking satisfiability...
 Unknown Formula: NOT SATISFIABLE
-Finished checking unknown formula (88ms).
+Finished checking unknown formula (120ms).
 
 Not Unknown Formula: NOT SATISFIABLE
-Finished checking not unknown formula (100ms).
+Finished checking not unknown formula (102ms).
 
-Total time for bound 3: 236ms
+Total time for bound 3: 279ms
 
 =============================================================================
 
 Performing model checking at bound 4
 Encoding formula...
-Finished encoding formula (56ms).
+Finished encoding formula (53ms).
 
 Checking satisfiability...
 Unknown Formula: SATISFIABLE
@@ -72,12 +72,12 @@ progress_1_4
 <2, 2, >	--- 0 --->
 <3, 2, >	--- 1 --->
 <3, 2, >
-Finished checking unknown formula (236ms).
+Finished checking unknown formula (271ms).
 
 Not Unknown Formula: NOT SATISFIABLE
-Finished checking not unknown formula (139ms).
+Finished checking not unknown formula (152ms).
 
-Total time for bound 4: 431ms
+Total time for bound 4: 476ms
 
 =============================================================================
 
@@ -126,5 +126,5 @@ Variable Mappings:
 | x21159          | l_0_0_0         |
 =====================================
 
-Overall Time: 1354 ms
+Overall Time: 1470 ms
 Refinement necessary. Exiting...
