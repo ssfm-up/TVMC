@@ -29,9 +29,11 @@ public class Main {
 
             Properties config = loadConfigurationFile();
             System.out.println();
-            for (int bound = 1; bound <= maxBound; ++bound) {
+            long overallTime = 0;
+            for (int bound = 0; bound <= maxBound; ++bound) {
+
                 System.out.println("Performing model checking at bound " + bound);
-                int overallTime = 0;
+                int runTime = 0;
                 long time = System.currentTimeMillis();
                 ThreeValuedModelChecker modelChecker = new ThreeValuedModelChecker(cfg, bound, config);
 
@@ -41,7 +43,7 @@ public class Main {
                 Formula unknownFormula = modelChecker.getUnknownFormula(formula);
                 Formula notUnknownFormula = modelChecker.getNotUnknownFormula(formula);
                 long timeUsed = (System.currentTimeMillis() - time);
-                overallTime += timeUsed;
+                runTime += timeUsed;
                 System.out.println("Finished encoding formula (" + timeUsed + "ms).");
 
                 System.out.println();
@@ -50,7 +52,7 @@ public class Main {
                 time = System.currentTimeMillis();
                 boolean unknownSatisfiable = modelChecker.checkSatisfiability(unknownFormula);
                 timeUsed = (System.currentTimeMillis() - time);
-                overallTime += timeUsed;
+                runTime += timeUsed;
                 System.out.println("Finished checking unknown formula (" + timeUsed + "ms).");
                 System.out.println();
 
@@ -58,24 +60,31 @@ public class Main {
                 time = System.currentTimeMillis();
                 boolean notUnknownSatisfiable = modelChecker.checkSatisfiability(notUnknownFormula);
                 timeUsed = (System.currentTimeMillis() - time);
-                overallTime += timeUsed;
+                runTime += timeUsed;
                 System.out.println("Finished checking not unknown formula (" + timeUsed + "ms).");
                 System.out.println();
 
-                System.out.println("Total time: " + overallTime + "ms");
+                System.out.println("Total time for bound " + bound + ": " + runTime + "ms");
+                overallTime += runTime;
+                System.out.println("\n=============================================================================\n");
                 if (unknownSatisfiable && !notUnknownSatisfiable) {
                     System.out.println();
                     modelChecker.printVars();
+                    System.out.println();
+                    System.out.println("Overall Time: " + overallTime + " ms");
                     System.out.println("Refinement necessary. Exiting...");
                     return;
                 }
                 else if (unknownSatisfiable && notUnknownSatisfiable) {
                     System.out.println();
                     modelChecker.printVars();
+                    System.out.println();
+                    System.out.println("Overall Time: " + overallTime + " ms");
                     System.out.println("Error found. Exiting...");
                     return;
                 }
             }
+            System.out.println("Overall Time: " + overallTime + " ms");
         } catch (IOException e) {
             e.printStackTrace();
         }
