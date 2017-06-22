@@ -45,3 +45,12 @@ fabric.properties
 
 bin/
 build.properties.backup
+
+examples/*.spot
+examples/*.c
+examples/*.ctl
+examples/*.pred
+examples/*.dot
+/*.jar
+*.zip
+/TVMC.wiki
