@@ -1,7 +1,5 @@
 package cnf;
 
-import com.dearvolt.satwrap.PicoSAT;
-import com.dearvolt.satwrap.SATSolver;
 import org.sat4j.core.VecInt;
 import org.sat4j.minisat.SolverFactory;
 import org.sat4j.specs.ContradictionException;
@@ -193,37 +191,6 @@ public class CNF {
       int[] model = problem.model();
       Set<Var> trueVars = new HashSet<Var>();
       for (Integer y : model) {
-        if (y > 0) {
-          trueVars.add(new Var(y));
-        }
-      }
-      return trueVars;
-    } else {
-      return null;
-    }
-  }
-
-  public static Set<Var> satisfiablePico(Formula f) throws TimeoutException {
-    TseitinVisitor tseitinVisitor = new TseitinVisitor();
-    Integer x = f.accept(tseitinVisitor);
-    Set<Set<Integer>> clauses = tseitinVisitor.getClauses();
-
-    int maxVar = nextName;
-
-//    ISolver solver = SolverFactory.newDefault();
-    SATSolver solver = new PicoSAT();
-//
-//    solver.newVar(maxVar);
-//    solver.setExpectedNumberOfClauses(clauses.size());
-    Set<Integer> temp = new TreeSet<>();
-    temp.add(x);
-    clauses.add(temp);
-    boolean result = solver.isFormulaSatisfiable(clauses);
-
-    if (result) {
-      Set<Integer> trueInts = solver.getTrueVariables();
-      Set<Var> trueVars = new HashSet<>();
-      for (Integer y : trueInts) {
         if (y > 0) {
           trueVars.add(new Var(y));
         }

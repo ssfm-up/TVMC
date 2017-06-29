@@ -58,13 +58,16 @@ public class Main {
                 System.out.println("Finished checking unknown formula (" + timeUsed + "ms).");
                 System.out.println();
 
-                System.out.print("Not Unknown Formula: ");
-                time = System.currentTimeMillis();
-                boolean notUnknownSatisfiable = modelChecker.checkSatisfiability(notUnknownFormula);
-                timeUsed = (System.currentTimeMillis() - time);
-                runTime += timeUsed;
-                System.out.println("Finished checking not unknown formula (" + timeUsed + "ms).");
-                System.out.println();
+                boolean notUnknownSatisfiable = false;
+                if (unknownSatisfiable) {
+                    System.out.print("Not Unknown Formula: ");
+                    time = System.currentTimeMillis();
+                    notUnknownSatisfiable = modelChecker.checkSatisfiability(notUnknownFormula);
+                    timeUsed = (System.currentTimeMillis() - time);
+                    runTime += timeUsed;
+                    System.out.println("Finished checking not unknown formula (" + timeUsed + "ms).");
+                    System.out.println();
+                }
 
                 System.out.println("Total time for bound " + bound + ": " + runTime + "ms");
                 overallTime += runTime;
