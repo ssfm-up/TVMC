@@ -50,6 +50,14 @@ public class CFG implements Serializable {
         return null;
     }
 
+    public void prune() {
+        for(Process p : processes) {
+            p.deleteState(1);
+            p.deleteState(0);
+            p.updateTransitions();
+        }
+    }
+
     public int getNumberOfProcesses() {
         return processes.size();
     }

@@ -19,7 +19,7 @@ public class TseitinVisitor implements FormulaVisitor<Integer> {
     clauses = new HashSet<Set<Integer>>();
   }
 
-  Set<Set<Integer>> getClauses() {
+  public Set<Set<Integer>> getClauses() {
     return clauses;
   }
 

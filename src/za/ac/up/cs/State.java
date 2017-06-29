@@ -16,6 +16,19 @@ public class State {
         return transitions;
     }
 
+    public void rename(int i) {
+        for (Transition t: transitions) {
+            int destination;
+            if (t.getDestination() == 0) {
+                destination = 0;
+            }
+            else {
+                destination = t.getDestination() - 2;
+            }
+            t.rename(i, destination);
+        }
+    }
+
     @Override
     public String toString() {
         return "state";

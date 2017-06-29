@@ -75,6 +75,16 @@ public class Process {
         return states;
     }
 
+    public void deleteState(int s) {
+        states.remove(s);
+    }
+
+    void updateTransitions() {
+        for (int i = 0; i < states.size(); i++) {
+            states.get(i).rename(i);
+        }
+    }
+
     public int getStateCount() {
         return states.size();
     }

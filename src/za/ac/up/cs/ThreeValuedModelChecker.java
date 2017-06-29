@@ -183,7 +183,7 @@ public class ThreeValuedModelChecker {
 
         if (checkFairness) {
             // TODO: Pass process ID and critical line in from Main, possibly through config object
-            init = and(init, constructLtlEncodingLiveness(0, 3));
+            init = and(init, constructLtlEncodingLiveness(0, 1));
         }
 
         if (ltlPropertyEncoding == null) return and(init, transitionEncoding, TRUE, neg(FALSE));
@@ -202,8 +202,7 @@ public class ThreeValuedModelChecker {
     /**
      * Check is a satisfying assignment for a formula can be found
      *
-     * @param formula
-     * The formula to be checked
+     * @param formula The formula to be checked
      */
     boolean checkSatisfiability(Formula formula) {
         Formula cnfFormula = cnf(formula);
@@ -217,11 +216,9 @@ public class ThreeValuedModelChecker {
                     if (trueVars.contains(vars.get(key))) {
                         if (key.startsWith("p_")) {
                             executionPath.addPredicate(key);
-                        }
-                        else if (key.startsWith("l_")) {
+                        } else if (key.startsWith("l_")) {
                             executionPath.addLocation(key);
-                        }
-                        else {
+                        } else {
                             executionPath.addProgressStep(key);
                         }
                         System.out.println(key);

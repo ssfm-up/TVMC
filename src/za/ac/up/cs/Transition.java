@@ -91,6 +91,11 @@ public class Transition {
         return encoding;
     }
 
+    void rename(int source, int destination) {
+        this.source = source;
+        this.destination = destination;
+    }
+
     List<Assignment> getAssignments() {
         return assignments;
     }

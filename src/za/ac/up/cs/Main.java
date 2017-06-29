@@ -26,11 +26,13 @@ public class Main {
             objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
             File file = new File(args[0]);
             CFG cfg = objectMapper.readValue(file, CFG.class);
+            cfg.prune();
+            //objectMapper.writeValue(new File("newJSON.json"), cfg);
 
             Properties config = loadConfigurationFile();
             System.out.println();
             long overallTime = 0;
-            for (int bound = 0; bound <= maxBound; ++bound) {
+            for (int bound = 1; bound <= maxBound; ++bound) {
 
                 System.out.println("Performing model checking at bound " + bound);
                 int runTime = 0;
