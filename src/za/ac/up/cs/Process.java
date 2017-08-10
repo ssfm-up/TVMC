@@ -48,7 +48,7 @@ public class Process {
                 }
 
                 if (transition.hasGuard()) {
-                    currentTransEncoding.add(transition.getGuardEncoding(mc, parser));
+                    currentTransEncoding.add(transition.getGuardEncoding(mc, parser, process));
                 }
 
                 currentTransEncoding.addAll(transition.getAssignmentEncodings(mc, parser, bound, r));

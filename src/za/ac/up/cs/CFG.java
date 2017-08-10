@@ -14,7 +14,8 @@ public class CFG implements Serializable {
     private Map<String, Integer> predicates;
     private List<Process> processes;
 
-    public CFG() {}
+    public CFG() {
+    }
 
     public CFG(Map<String, Integer> predicates, List<Process> processes) {
         this.predicates = predicates;
@@ -34,7 +35,7 @@ public class CFG implements Serializable {
             return processes.get(p);
         }
         // TODO: Throw an exception instead?
-        return null;
+        throw new IndexOutOfBoundsException("Process index " + p + " is out of bounds!");
     }
 
     int getPredicate(String key) {
@@ -51,7 +52,7 @@ public class CFG implements Serializable {
     }
 
     public void prune() {
-        for(Process p : processes) {
+        for (Process p : processes) {
             p.deleteState(1);
             p.deleteState(0);
             p.updateTransitions();

@@ -10,17 +10,27 @@ import java.util.Properties;
 
 public class Main {
 
-    final static String CONFIG_FILE = "config.properties";
+    private final static String CONFIG_FILE = "config.properties";
 
     public static void main(String[] args) {
-        if (args.length != 2) {
+        if (args.length > 3) {
             printUsage();
             return;
         }
 
         try {
             System.out.println(new java.util.Date());
-            int maxBound = Integer.valueOf(args[1]);
+            int minBound;
+            int maxBound;
+            if (args.length == 2) {
+                minBound = 1;
+                maxBound = Integer.valueOf(args[1]);
+            }
+            else {
+                minBound = Integer.valueOf(args[1]);
+                maxBound = Integer.valueOf(args[2]);
+            }
+
             System.out.println("Max Bound: " + maxBound);
             ObjectMapper objectMapper = new ObjectMapper();
             objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
@@ -32,7 +42,7 @@ public class Main {
             Properties config = loadConfigurationFile();
             System.out.println();
             long overallTime = 0;
-            for (int bound = 1; bound <= maxBound; ++bound) {
+            for (int bound = minBound; bound <= maxBound; ++bound) {
 
                 System.out.println("Performing model checking at bound " + bound);
                 int runTime = 0;
@@ -40,8 +50,7 @@ public class Main {
                 ThreeValuedModelChecker modelChecker = new ThreeValuedModelChecker(cfg, bound, config);
 
                 System.out.println("Encoding formula...");
-                Formula ltlEncoding = null;
-                Formula formula = modelChecker.constructFormula(ltlEncoding);
+                Formula formula = modelChecker.constructFormula(null);
                 Formula unknownFormula = modelChecker.getUnknownFormula(formula);
                 Formula notUnknownFormula = modelChecker.getNotUnknownFormula(formula);
                 long timeUsed = (System.currentTimeMillis() - time);
@@ -80,7 +89,7 @@ public class Main {
                     System.out.println("Refinement necessary. Exiting...");
                     return;
                 }
-                else if (unknownSatisfiable && notUnknownSatisfiable) {
+                else if (unknownSatisfiable) {
                     System.out.println();
                     modelChecker.printVars();
                     System.out.println();

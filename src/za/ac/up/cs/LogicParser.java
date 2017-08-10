@@ -10,7 +10,6 @@ import org.codehaus.jparsec.functors.Binary;
 import org.codehaus.jparsec.functors.Unary;
 
 import java.util.Map;
-import java.util.Objects;
 
 import static cnf.CNF.*;
 
@@ -26,7 +25,7 @@ public class LogicParser {
         public Formula map(String s) {
 //            System.out.println("INT");
             int pred = Integer.parseInt(s);
-            return or(and(var(predVar(pred, bound, false)), unknownVar) , and(var(predVar(pred, bound, true)), neg(var(predVar(pred, bound, false))))) ;
+            return enc(pred);
         }
     });
 
@@ -46,18 +45,22 @@ public class LogicParser {
     // Atoms of the form ~\d+. Negated predicates e.g. ~0
     private final Parser<Formula> STRING = Terminals.StringLiteral.PARSER.map(new org.codehaus.jparsec.functors.Map<String, Formula>() {
         public Formula map(String s) {
-//            System.out.println("STRING");
-//            if (s.equals("t")) return trueVar;
-//            if (s.equals("f")) return falseVar;
             if (s.startsWith("~")) {
                 int pred = Integer.parseInt(s.substring(1));
-                return or(and(var(predVar(pred, bound, false)), unknownVar), and(neg(var(predVar(pred, bound, true))), neg(var(predVar(pred, bound, false))))) ;
+                Formula unknown = var(mc.predUnknownVar(process, pred));
+                return or(and(var(predVar(pred, bound, false)), unknown), and(neg(var(predVar(pred, bound, true))), neg(var(predVar(pred, bound, false)))));
             }
 
             int pred = Integer.parseInt(s);
-            return or(and(var(predVar(pred, bound, false)), unknownVar) , and(var(predVar(pred, bound, true)), neg(var(predVar(pred, bound, false))))) ;
+            return enc(pred);
         }
     });
+
+    private Formula enc(int p) {
+        Formula unknown = var(mc.predUnknownVar(process, p));
+        // return enc(p) where enc(p) = (p[u] /\ u) \/ (~p[u] /\ p[t])
+        return or(and(var(predVar(p, bound, false)), unknown), and(neg(var(predVar(p, bound, false))), var(predVar(p, bound, true))));
+    }
 
     private final Terminals OPERATORS = Terminals.operators("or", "and", "not", "(", ")");
     private final Parser<?> TOKENIZER = OPERATORS.tokenizer().cast()
@@ -65,20 +68,20 @@ public class LogicParser {
             .or(Terminals.CharLiteral.SINGLE_QUOTE_TOKENIZER)
             .or(Terminals.StringLiteral.DOUBLE_QUOTE_TOKENIZER);
     public final Parser<Formula> LOGIC_PARSER = logicParser(PREDICATE.or(BOOL).or(STRING)).from(TOKENIZER, IGNORED);
-    private final Map<String, Integer> predMap;
     private final Map<String, Var> vars;
     private final Formula trueVar;
     private final Formula falseVar;
-    private final Formula unknownVar;
     private final int bound;
+    private final int process;
+    private final ThreeValuedModelChecker mc;
 
-    public LogicParser(Map<String, Integer> predMap, Map<String, Var> vars, Formula trueVar, Formula falseVar, Formula unknownVar, int bound) {
-        this.predMap = predMap;
+    public LogicParser(ThreeValuedModelChecker mc, Map<String, Var> vars, Formula trueVar, Formula falseVar, int bound, int process) {
         this.vars = vars;
         this.trueVar = trueVar;
         this.falseVar = falseVar;
-        this.unknownVar = unknownVar;
         this.bound = bound;
+        this.process = process;
+        this.mc = mc;
     }
 
 

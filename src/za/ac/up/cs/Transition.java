@@ -31,7 +31,7 @@ public class Transition {
         return destination;
     }
 
-    Formula getGuardEncoding(ThreeValuedModelChecker mc, LogicParser parser) {
+    Formula getGuardEncoding(ThreeValuedModelChecker mc, LogicParser parser, int process) {
         String s = guard;
 
         ParserHelper parserHelper = new ParserHelper(parser, s, mc.predMap).invoke();
@@ -46,9 +46,9 @@ public class Transition {
         String str = "not(" + bRaw + ")";
         String modifiedB = parserHelper.cleanExpression(str);
         Formula notB = parserHelper.getParser().LOGIC_PARSER.parse(modifiedB);
-        // choice(a, b) = (a or not b) and (a or b or unknown)
-        Formula choiceEncoding = and(or(a, notB), or(a, b, ThreeValuedModelChecker.UNKNOWN));
-        return choiceEncoding;
+        Formula unknown = var(mc.guardUnknownVar(process, guard));
+        // return enc(choice(a, b)) where choice(a, b) = (a or not b) and (a or b or unknown)
+        return and(or(a, notB), or(a, b, unknown));
     }
 
     List<Formula> getAssignmentEncodings(ThreeValuedModelChecker mc, LogicParser parser, int bound, int r) {

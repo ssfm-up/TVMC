@@ -21,6 +21,8 @@ public class ThreeValuedModelChecker {
     final Map<String, Var> vars = new HashMap<>();
     // Used to lookup the number of the predicate
     final Map<String, Integer> predMap = new HashMap<>();
+    final Map<Var, Integer> predUnknownMap = new HashMap<>();
+    final Map<Formula, String> guardUnknownMap = new HashMap<>();
     final int maxBound;
     boolean checkFairness = true;
     Var[][] progress;
@@ -97,6 +99,14 @@ public class ThreeValuedModelChecker {
 
     Var predVar(int pred, int bound, boolean known) {
         return getNamedVar("p_" + pred + "_" + bound + "_" + (known ? "b" : "u"));
+    }
+
+    Var predUnknownVar(int process, int pred) {
+        return getNamedVar("u_" + process + "_" + pred);
+    }
+
+    Var guardUnknownVar(int process, String guard) {
+        return getNamedVar("u_" + process + "_" + guard);
     }
 
     /**
@@ -285,7 +295,7 @@ public class ThreeValuedModelChecker {
      * @return A Formula representing the encoded transitions
      */
     private Formula encodeTransition(Process cfg, int process, int bound, int r) {
-        LogicParser parser = new LogicParser(predMap, vars, TRUE, FALSE, UNKNOWN, bound);
+        LogicParser parser = new LogicParser(this, vars, TRUE, FALSE, bound, process);
         return cfg.getEncoding(this, process, bound, r, parser);
     }
 
