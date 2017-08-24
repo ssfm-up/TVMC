@@ -1,0 +1,13 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="TVMC:jar">
+    <output-path>$PROJECT_DIR$/</output-path>
+    <root id="archive" name="TVMC.jar">
+      <element id="module-output" name="TVMC" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/libs/jackson-annotations-2.9.0.pr3.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/libs/jparsec-2.3.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/libs/org.sat4j.core.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/libs/jackson-databind-2.9.0.pr3.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/libs/jackson-core-2.9.0.pr3.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>

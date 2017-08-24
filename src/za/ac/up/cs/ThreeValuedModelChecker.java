@@ -102,11 +102,11 @@ public class ThreeValuedModelChecker {
     }
 
     Var predUnknownVar(int process, int pred) {
-        return getNamedVar("u_" + process + "_" + pred);
+        return getNamedVar("u_" + process + "_p_" + pred);
     }
 
     Var guardUnknownVar(int process, String guard) {
-        return getNamedVar("u_" + process + "_" + guard);
+        return getNamedVar("u_" + process + "_g_" + guard);
     }
 
     /**
@@ -228,12 +228,16 @@ public class ThreeValuedModelChecker {
                             executionPath.addPredicate(key);
                         } else if (key.startsWith("l_")) {
                             executionPath.addLocation(key);
-                        } else {
+                        } else if (key.startsWith("u_")) {
+                            // TODO: Add unknown to list for use in refinement
+                        }
+                        else {
                             executionPath.addProgressStep(key);
                         }
                         System.out.println(key);
                     }
                 }
+                // TODO: Use list of true unknowns here for refinement
                 System.out.println();
                 System.out.println(executionPath);
                 return true;

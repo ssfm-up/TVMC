@@ -37,7 +37,6 @@ public class Main {
             File file = new File(args[0]);
             CFG cfg = objectMapper.readValue(file, CFG.class);
             cfg.prune();
-            //objectMapper.writeValue(new File("newJSON.json"), cfg);
 
             Properties config = loadConfigurationFile();
             System.out.println();
