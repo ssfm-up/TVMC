@@ -1,11 +1,10 @@
 package cnf;
 
+import org.sat4j.core.Vec;
 import org.sat4j.core.VecInt;
 import org.sat4j.minisat.SolverFactory;
-import org.sat4j.specs.ContradictionException;
-import org.sat4j.specs.IProblem;
-import org.sat4j.specs.ISolver;
-import org.sat4j.specs.TimeoutException;
+import org.sat4j.minisat.core.Solver;
+import org.sat4j.specs.*;
 
 import java.util.*;
 
@@ -123,9 +122,9 @@ public class CNF {
 
   /**
    * Gibt eine zur uebergebenen Formel erfuellbarkeitsaequivalente
-   * Formel in CNF zurueck. 
+   * Formel in CNF zurueck.
    * <p>
-   * Diese Methode kann zum Anzeigen der CNF einer Formel benutzt werden: 
+   * Diese Methode kann zum Anzeigen der CNF einer Formel benutzt werden:
    * {@code System.out.println(cnf(f))}.
    *
    * @param f Formel
@@ -147,13 +146,55 @@ public class CNF {
     return tseitinVisitor.getResultDIMACS(x);
   }
 
+  public static Solver addClauses(Solver solver, Formula f) {
+    TseitinVisitor tseitinVisitor = new TseitinVisitor();
+    Integer x = f.accept(tseitinVisitor);
+    Set<Set<Integer>> clauses = tseitinVisitor.getClauses();
+
+    int maxVar = nextName;
+
+    solver.newVar(maxVar);
+    solver.setExpectedNumberOfClauses(clauses.size());
+    try {
+      solver.addClause(new VecInt(new int[]{x}));
+      for (Set<Integer> c : clauses) {
+        int[] carr = new int[c.size()];
+        int i = 0;
+        for (Integer y : c) {
+          carr[i] = y;
+          i++;
+        }
+        solver.addClause(new VecInt(carr));
+      }
+    } catch (ContradictionException ex) {
+      return null; // unsat
+    }
+
+    return solver;
+  }
+
+  public static Set<Var> isSatisfiable(Solver solver) throws TimeoutException {
+    if (solver.isSatisfiable()) {
+      int[] model = solver.model();
+      Set<Var> trueVars = new HashSet<>();
+      for (Integer y : model) {
+        if (y > 0) {
+          trueVars.add(new Var(y));
+        }
+      }
+      return trueVars;
+    } else {
+      return null;
+    }
+  }
+
   /**
    * Wandelt die uebergebene Formel in eine erfuellbarkeitsaequivalente Formel
    * in CNF um und ueberprueft sie mittels des SAT-Solvers SAT4j auf Erfuellbarkeit.
-   * 
+   *
    * Zurueckgegeben wird die Menge der wahren Variablen in einer erfuellenden
    * Belegung von {@code f} oder {@code null}, wenn es keine solche gibt.
-   * 
+   *
    * @param f Formel
    * @throws TimeoutException
    * @return Menge der Variablen, die in einer erfuellenden Belegung

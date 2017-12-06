@@ -1,16 +1,11 @@
 package za.ac.up.cs;
 
 import cnf.Formula;
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.*;
 import java.util.Properties;
 
 public class Main {
-
-    private final static String CONFIG_FILE = "config.properties";
 
     public static void main(String[] args) {
         if (args.length > 3) {
@@ -32,14 +27,12 @@ public class Main {
             }
 
             System.out.println("Max Bound: " + maxBound);
-            ObjectMapper objectMapper = new ObjectMapper();
-            objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
-            File file = new File(args[0]);
-            CFG cfg = objectMapper.readValue(file, CFG.class);
-            cfg.prune();
 
-            Properties config = loadConfigurationFile();
+            CFG cfg = Helpers.readCfg(args[0]);
+            Properties config = Helpers.loadConfigurationFile();
+
             System.out.println();
+
             long overallTime = 0;
             for (int bound = minBound; bound <= maxBound; ++bound) {
 
@@ -105,33 +98,6 @@ public class Main {
 
     private static void printUsage() {
         System.out.println("USAGE: inputfile.json <maxBound>");
-    }
-
-    /**
-     * Loads the properties file, config.properties, if it exists otherwise writes one with default values and returns it
-     *
-     * @return A Properties object containing the program configuration
-     */
-    private static Properties loadConfigurationFile() {
-        Properties prop = new Properties();
-        InputStream input = null;
-
-        try {
-            input = new FileInputStream(CONFIG_FILE);
-            prop.load(input);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            if (input != null) {
-                try {
-                    input.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-
-        return prop;
     }
 
 }
