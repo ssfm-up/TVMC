@@ -3,6 +3,9 @@ package za.ac.up.cs;
 import cnf.CNF;
 import cnf.Formula;
 import cnf.Var;
+import org.sat4j.minisat.SolverFactory;
+import org.sat4j.specs.ISolver;
+import org.sat4j.specs.IVecInt;
 import org.sat4j.specs.TimeoutException;
 
 import java.util.*;
@@ -215,9 +218,18 @@ public class ThreeValuedModelChecker {
      * @param formula The formula to be checked
      */
     boolean checkSatisfiability(Formula formula) {
+        return checkSatisfiability(formula, SolverFactory.newDefault(), null);
+    }
+
+    /**
+     * Check is a satisfying assignment for a formula can be found
+     *
+     * @param formula The formula to be checked
+     */
+    boolean checkSatisfiability(Formula formula, ISolver solver, IVecInt constraints) {
         Formula cnfFormula = cnf(formula);
         try {
-            Set<Var> trueVars = CNF.satisfiable(cnfFormula);
+            Set<Var> trueVars = CNF.satisfiable(cnfFormula, solver, constraints);
             if (trueVars != null) {
                 System.out.println("SATISFIABLE");
                 System.out.println("True Variables:");
@@ -230,8 +242,7 @@ public class ThreeValuedModelChecker {
                             executionPath.addLocation(key);
                         } else if (key.startsWith("u_")) {
                             // TODO: Add unknown to list for use in refinement
-                        }
-                        else {
+                        } else {
                             executionPath.addProgressStep(key);
                         }
                         System.out.println(key);
