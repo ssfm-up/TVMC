@@ -1,22 +1,22 @@
 package za.ac.up.cs;
 
-import cnf.CNF;
 import cnf.Formula;
-import cnf.Var;
+import org.sat4j.core.VecInt;
 import org.sat4j.minisat.SolverFactory;
-import org.sat4j.minisat.core.Constr;
-import org.sat4j.minisat.core.DataStructureFactory;
 import org.sat4j.minisat.core.Solver;
 import org.sat4j.specs.IVec;
 import org.sat4j.specs.IVecInt;
-import org.sat4j.specs.IteratorInt;
-import org.sat4j.specs.TimeoutException;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.*;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Properties;
 
+import static cnf.CNF.and;
 import static cnf.CNF.cnf;
+import static cnf.CNF.neg;
 
 public class UnboundedMain {
 
@@ -47,34 +47,33 @@ public class UnboundedMain {
 
             UnboundedModelChecker modelChecker = new UnboundedModelChecker(cfg, maxBound, config);
             Formula baseCase = modelChecker.getBaseCaseFormula();
-            Formula cnfFormula = cnf(baseCase);
+            System.out.println("baseCase = " + baseCase);
 
             Solver solver = SolverFactory.newMiniLearningHeap();
-            solver = CNF.addClauses(solver, cnfFormula);
+//            boolean b = modelChecker.checkSatisfiability(and(baseCase, neg(UnboundedModelChecker.UNKNOWN)), solver, null);
+            boolean b = modelChecker.checkSatisfiability(baseCase, solver, new VecInt(new int[]{-3}));
+            modelChecker.printVars();
+            System.out.println("Is satisfiable? = " + b);
 
-            if (solver == null) {
-                System.out.println("Unsatisfiable");
-            } else {
-                PrintWriter out = new PrintWriter(System.out);
+            PrintWriter out = new PrintWriter(System.out);
 
-                Set<Var> trueVars = CNF.isSatisfiable(solver);
+//            Vec<VecInt> assump1 = CNF.getClauses(ThreeValuedModelChecker.UNKNOWN);
 
-                solver.printLearntClausesInfos(out, "Learnt clause: ");
-                out.flush();
-                System.out.println();
+            solver.printLearntClausesInfos(out, "Learnt clause: ");
+            out.flush();
+            System.out.println();
 
-                IVecInt outLearnt = solver.getOutLearnt();
-                IVec learnedConstraints = solver.getLearnedConstraints();
+            IVecInt outLearnt = solver.getOutLearnt();
+            IVec learnedConstraints = solver.getLearnedConstraints();
 //                IteratorInt iterator = outLearnt.iterator();
-                Iterator iterator = learnedConstraints.iterator();
-                while (iterator.hasNext()) {
-                    Object next = iterator.next();
-                    System.out.println("Learned constraint: " + next);
-                }
-                Map stat = solver.getStat();
-
-                stat.forEach((o, o2) -> System.out.println(o + " --- " + o2));
+            Iterator iterator = learnedConstraints.iterator();
+            while (iterator.hasNext()) {
+                Object next = iterator.next();
+                System.out.println("Learned constraint: " + next);
             }
+            Map stat = solver.getStat();
+
+            stat.forEach((o, o2) -> System.out.println(o + " --- " + o2));
 
 
 //            solver.addClause()
@@ -83,13 +82,10 @@ public class UnboundedMain {
 //        solver.isSatisfiable(assumps); // check satisfiability under assumptions e.g. 3 or -3 if 3 represents 'unknown'
 
 
-
         } catch (IOException e) {
             System.out.println("IOException");
         } catch (NumberFormatException e) {
             System.out.println("Number format exception");
-        } catch (TimeoutException e) {
-            System.out.println("Sat4j timeout");
         }
 
 

@@ -146,6 +146,40 @@ public class CNF {
     return tseitinVisitor.getResultDIMACS(x);
   }
 
+  public static Vec<VecInt> getClauses(Formula f) {
+    TseitinVisitor tseitinVisitor = new TseitinVisitor();
+    Integer x = f.accept(tseitinVisitor);
+    Set<Set<Integer>> clauses = tseitinVisitor.getClauses();
+    Vec<VecInt> result = new Vec<>();
+
+    result.insertFirst(new VecInt(new int[]{x}));
+    for (Set<Integer> c : clauses) {
+      int[] carr = new int[c.size()];
+      int i = 0;
+      for (Integer y : c) {
+        carr[i] = y;
+        i++;
+      }
+      result.insertFirst(new VecInt(carr));
+    }
+
+    return result;
+  }
+
+  public static Solver addClauses(Solver solver, Vec<VecInt> clauses) {
+    int maxVar = nextName;
+
+    solver.newVar(maxVar);
+    solver.setExpectedNumberOfClauses(clauses.size());
+    try {
+      solver.addAllClauses(clauses);
+    } catch (ContradictionException ex) {
+      return null; // unsat
+    }
+
+    return solver;
+  }
+
   public static Solver addClauses(Solver solver, Formula f) {
     TseitinVisitor tseitinVisitor = new TseitinVisitor();
     Integer x = f.accept(tseitinVisitor);
@@ -240,6 +274,56 @@ public class CNF {
     } else {
       return null;
     }
+  }
+
+  public static Set<Var> satisfiable(Formula f, ISolver solver, IVecInt constraints) throws TimeoutException {
+    TseitinVisitor tseitinVisitor = new TseitinVisitor();
+    Integer x = f.accept(tseitinVisitor);
+    Set<Set<Integer>> clauses = tseitinVisitor.getClauses();
+
+    int maxVar = nextName;
+
+    solver.newVar(maxVar);
+    solver.setExpectedNumberOfClauses(clauses.size());
+    try {
+      solver.addClause(new VecInt(new int[]{x}));
+      for (Set<Integer> c : clauses) {
+        int[] carr = new int[c.size()];
+        int i = 0;
+        for (Integer y : c) {
+          carr[i] = y;
+          i++;
+        }
+        solver.addClause(new VecInt(carr));
+      }
+    } catch (ContradictionException ex) {
+      return null; // unsat
+    }
+
+    if (constraints != null) {
+      if (solver.isSatisfiable(constraints)) {
+        int[] model = solver.model();
+        Set<Var> trueVars = new HashSet<>();
+        for (Integer y : model) {
+          if (y > 0) {
+            trueVars.add(new Var(y));
+          }
+        }
+        return trueVars;
+      } else {
+        return null;
+      }
+    } else if (solver.isSatisfiable()) {
+      int[] model = solver.model();
+      Set<Var> trueVars = new HashSet<>();
+      for (Integer y : model) {
+        if (y > 0) {
+          trueVars.add(new Var(y));
+        }
+      }
+      return trueVars;
+    } else return null;
+
   }
 
   /**
