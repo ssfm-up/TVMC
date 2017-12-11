@@ -221,10 +221,14 @@ public class ThreeValuedModelChecker {
         return checkSatisfiability(formula, SolverFactory.newDefault(), null);
     }
 
+
     /**
      * Check is a satisfying assignment for a formula can be found
      *
      * @param formula The formula to be checked
+     * @param solver A solver to be used for the satisfiability check
+     * @param constraints The constraints that should not be learned by the solver
+     * @return Is the formula satisfiable
      */
     boolean checkSatisfiability(Formula formula, ISolver solver, IVecInt constraints) {
         Formula cnfFormula = cnf(formula);
@@ -269,6 +273,9 @@ public class ThreeValuedModelChecker {
     void printVars() {
         System.out.println("Variable Mappings:");
         System.out.println("=====================================");
+        System.out.println(String.format("| %1$-15s", FALSE) + " | " + String.format("%1$-15s |", "FALSE"));
+        System.out.println(String.format("| %1$-15s", TRUE) + " | " + String.format("%1$-15s |", "TRUE"));
+        System.out.println(String.format("| %1$-15s", UNKNOWN) + " | " + String.format("%1$-15s |", "UNKNOWN"));
         for (Map.Entry<String, Var> e : vars.entrySet()) {
             System.out.println(String.format("| %1$-15s", e.getValue()) + " | " + String.format("%1$-15s |", e.getKey()));
         }
