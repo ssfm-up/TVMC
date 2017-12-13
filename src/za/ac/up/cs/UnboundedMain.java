@@ -6,6 +6,7 @@ import org.sat4j.minisat.SolverFactory;
 import org.sat4j.minisat.core.Solver;
 import org.sat4j.specs.IVec;
 import org.sat4j.specs.IVecInt;
+import org.sat4j.specs.IteratorInt;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -13,10 +14,6 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
-
-import static cnf.CNF.and;
-import static cnf.CNF.cnf;
-import static cnf.CNF.neg;
 
 public class UnboundedMain {
 
@@ -51,29 +48,20 @@ public class UnboundedMain {
 
             Solver solver = SolverFactory.newMiniLearningHeap();
 //            boolean b = modelChecker.checkSatisfiability(and(baseCase, neg(UnboundedModelChecker.UNKNOWN)), solver, null);
-            boolean b = modelChecker.checkSatisfiability(baseCase, solver, new VecInt(new int[]{-3}));
+            System.out.println("==== UNKNOWN FORMULA ====");
+            boolean b = modelChecker.checkSatisfiability(baseCase, solver, new VecInt(new int[]{3}));
             modelChecker.printVars();
             System.out.println("Is satisfiable? = " + b);
 
-            PrintWriter out = new PrintWriter(System.out);
+            printStats(solver);
 
-//            Vec<VecInt> assump1 = CNF.getClauses(ThreeValuedModelChecker.UNKNOWN);
-
-            solver.printLearntClausesInfos(out, "Learnt clause: ");
-            out.flush();
             System.out.println();
+            System.out.println("==== NOT UNKNOWN FORMULA ====");
+            b = modelChecker.checkSatisfiability(baseCase, solver, new VecInt(new int[]{-3}));
+            modelChecker.printVars();
+            System.out.println("Is satisfiable? = " + b);
 
-            IVecInt outLearnt = solver.getOutLearnt();
-            IVec learnedConstraints = solver.getLearnedConstraints();
-//                IteratorInt iterator = outLearnt.iterator();
-            Iterator iterator = learnedConstraints.iterator();
-            while (iterator.hasNext()) {
-                Object next = iterator.next();
-                System.out.println("Learned constraint: " + next);
-            }
-            Map stat = solver.getStat();
-
-            stat.forEach((o, o2) -> System.out.println(o + " --- " + o2));
+            printStats(solver);
 
 
 //            solver.addClause()
@@ -89,6 +77,31 @@ public class UnboundedMain {
         }
 
 
+    }
+
+    private static void printStats(Solver solver) {
+        PrintWriter out = new PrintWriter(System.out);
+        solver.printLearntClausesInfos(out, "Learnt clause: ");
+        out.flush();
+        System.out.println();
+
+        IVec learnedConstraints = solver.getLearnedConstraints();
+//                IteratorInt iterator = outLearnt.iterator();
+        Iterator iterator = learnedConstraints.iterator();
+        while (iterator.hasNext()) {
+            Object next = iterator.next();
+            System.out.println("Learned constraint: " + next);
+        }
+
+        IVecInt outLearnt = solver.getOutLearnt();
+        IteratorInt outLearntIterator = outLearnt.iterator();
+        while (outLearntIterator.hasNext()) {
+            System.out.println("solver.getOutLearnt() : " + outLearntIterator.next());
+        }
+
+        Map stat = solver.getStat();
+
+        stat.forEach((o, o2) -> System.out.println(o + " --- " + o2));
     }
 
     private static void printUsage() {
