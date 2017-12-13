@@ -33,6 +33,8 @@ public class Transition {
 
     Formula getGuardEncoding(ThreeValuedModelChecker mc, LogicParser parser, int process) {
         String s = guard;
+        if (s.equals("choice(false, false)"))
+            return ThreeValuedModelChecker.UNKNOWN;
 
         ParserHelper parserHelper = new ParserHelper(parser, s, mc.predMap).invoke();
         Formula a = parserHelper.getA();
