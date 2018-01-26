@@ -20,22 +20,29 @@ public class ThreeValuedModelChecker {
     static final int FALSE_VAL = 0;
     static final int TRUE_VAL = 1;
     static final int UNKNOWN_VAL = 2;
-    final CFG cfgs;
     final Map<String, Var> vars = new HashMap<>();
     // Used to lookup the number of the predicate
     final Map<String, Integer> predMap = new HashMap<>();
     final Map<Var, Integer> predUnknownMap = new HashMap<>();
     final Map<Formula, String> guardUnknownMap = new HashMap<>();
     final int maxBound;
+    CFG cfgs;
     boolean checkFairness = false;
     Var[][] progress;
     Properties config;
+    boolean isUnknownFormula = true;
 
     public ThreeValuedModelChecker(CFG cfgs, int maxBound, Properties config) {
         this.cfgs = cfgs;
         this.maxBound = maxBound;
         this.predMap.putAll(cfgs.getPredicates());
         this.config = config;
+        progress = initialiseProgressFlags();
+    }
+
+    public void setCfgs(CFG cfgs) {
+        this.cfgs = cfgs;
+        this.predMap.putAll(cfgs.getPredicates());
         progress = initialiseProgressFlags();
     }
 
@@ -105,11 +112,20 @@ public class ThreeValuedModelChecker {
     }
 
     Var predUnknownVar(int process, int pred) {
-        return getNamedVar("u_" + process + "_p_" + pred);
+        if (checkFairness)
+            return getNamedVar("u_" + process + "_p_" + pred);
+
+        if (isUnknownFormula) return new Var(TRUE_VAL + 1);
+        return new Var(FALSE_VAL + 1);
+
     }
 
     Var guardUnknownVar(int process, String guard) {
-        return getNamedVar("u_" + process + "_g_" + guard);
+        if (checkFairness)
+            return getNamedVar("u_" + process + "_g_" + guard);
+
+        if (isUnknownFormula) return new Var(TRUE_VAL + 1);
+        return new Var(FALSE_VAL + 1);
     }
 
     /**
@@ -174,7 +190,9 @@ public class ThreeValuedModelChecker {
         return and(forAllProcesses);
     }
 
-    Formula constructFormula(Formula ltlPropertyEncoding) {
+    Formula constructFormula(Formula ltlPropertyEncoding, boolean isUnknownFormula) {
+        this.isUnknownFormula = isUnknownFormula;
+
         ArrayList<Formula> initialProgressValues = new ArrayList<>();
         ArrayList<Formula> initialState = new ArrayList<>();
 
@@ -225,8 +243,8 @@ public class ThreeValuedModelChecker {
     /**
      * Check is a satisfying assignment for a formula can be found
      *
-     * @param formula The formula to be checked
-     * @param solver A solver to be used for the satisfiability check
+     * @param formula     The formula to be checked
+     * @param solver      A solver to be used for the satisfiability check
      * @param constraints The constraints that should not be learned by the solver
      * @return Is the formula satisfiable
      */

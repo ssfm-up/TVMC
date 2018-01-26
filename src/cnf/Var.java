@@ -17,7 +17,7 @@ public final class Var {
     this.number = CNF.freshName();
   }
 
-  Var(int n) {
+  public Var(int n) {
     this.number = n;
   }
 

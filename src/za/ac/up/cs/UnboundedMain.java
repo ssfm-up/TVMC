@@ -22,64 +22,28 @@ public class UnboundedMain {
             printUsage();
             return;
         }
+        int loc = 1;
 
         try {
             System.out.println(new Date());
-            int minBound;
-            int maxBound;
-            if (args.length == 2) {
-                minBound = 1;
-                maxBound = Integer.valueOf(args[1]);
-            } else {
-                minBound = Integer.valueOf(args[1]);
-                maxBound = Integer.valueOf(args[2]);
-            }
+            int maxBound = Integer.parseInt(args[2]);
 
             System.out.println("Max Bound: " + maxBound);
 
-            CFG cfg = Helpers.readCfg(args[0]);
+            CFG cfg1 = Helpers.readCfg(args[0]);
+            CFG cfg2 = Helpers.readCfg(args[1]);
+
             Properties config = Helpers.loadConfigurationFile();
-
             System.out.println();
-
-            UnboundedModelChecker modelChecker = new UnboundedModelChecker(cfg, maxBound, config);
-            Formula baseCase = modelChecker.getBaseCaseFormula(null);
-            System.out.println("baseCase = " + baseCase);
-
-            // Safety encoding
-            int loc = 1;
-            List<Formula> safetyFormulas = new ArrayList<>();
-            for (int k = 0; k < maxBound - 1; k++) {
-                safetyFormulas.add(modelChecker.safeLoc(k, loc));
-            }
-            safetyFormulas.add(neg(modelChecker.safeLoc(maxBound - 1, loc)));
-            Formula ltlEncoding = and(safetyFormulas);
-            System.out.println("ltlEncoding = " + ltlEncoding);
-            //
-
-            Formula formula = and(baseCase, ltlEncoding);
-
+            UnboundedModelChecker modelChecker = new UnboundedModelChecker(cfg1, maxBound, config);
             Solver solver = SolverFactory.newMiniLearningHeap();
-//            boolean b = modelChecker.checkSatisfiability(and(baseCase, neg(UnboundedModelChecker.UNKNOWN)), solver, null);
-            System.out.println("==== UNKNOWN FORMULA ====");
-            boolean bUnknown = modelChecker.checkSatisfiability(formula, solver, new VecInt(new int[]{3}));
-            modelChecker.printVars();
-            System.out.println("Is satisfiable? = " + bUnknown);
 
-            printStats(solver);
-
+            System.out.println("===========" + args[0] + "===========");
+            checkSafety(maxBound, modelChecker, solver, loc);
             System.out.println();
-            System.out.println("==== NOT UNKNOWN FORMULA ====");
-            boolean bNotUnknown = modelChecker.checkSatisfiability(formula, solver, new VecInt(new int[]{-3}));
-            modelChecker.printVars();
-            System.out.println("Is satisfiable? = " + bNotUnknown);
-
-            printStats(solver);
-
-            System.out.println();
-
-            System.out.println("Unknown formula satisfiable: " + bUnknown);
-            System.out.println("Not unknown formula satisfiable: " + bNotUnknown);
+            System.out.println("===========" + args[1] + "===========");
+            modelChecker.setCfgs(cfg2);
+            checkSafety(maxBound, modelChecker, solver, loc);
 //            solver.addClause()
 //        solver.addAllClauses(clauses); //add a formula consisting of clauses to the solver
 //        solver.addClause(literals);    //add a clause consisting of literals to the solver
@@ -93,6 +57,48 @@ public class UnboundedMain {
         }
 
 
+    }
+
+    private static void checkSafety(int maxBound, UnboundedModelChecker modelChecker, Solver solver, int loc) {
+        Formula baseCaseUnknown = modelChecker.getBaseCaseFormula(null, true);
+        System.out.println("baseCaseUnknown = " + baseCaseUnknown);
+        Formula baseCaseNotUnknown = modelChecker.getBaseCaseFormula(null, false);
+        System.out.println("baseCaseNotUnknown = " + baseCaseNotUnknown);
+        System.out.println();
+
+        // Safety encoding
+        List<Formula> safetyFormulas = new ArrayList<>();
+        for (int k = 0; k < maxBound - 1; k++) {
+            safetyFormulas.add(modelChecker.safeLoc(k, loc));
+        }
+        safetyFormulas.add(neg(modelChecker.safeLoc(maxBound - 1, loc)));
+        Formula ltlEncoding = and(safetyFormulas);
+        System.out.println("ltlEncoding = " + ltlEncoding);
+        //
+
+        Formula formulaUnknown = and(baseCaseUnknown, ltlEncoding);
+        Formula formulaNotUnknown = and(baseCaseNotUnknown, ltlEncoding);
+
+        //            boolean b = modelChecker.checkSatisfiability(and(baseCaseUnknown, neg(UnboundedModelChecker.UNKNOWN)), solver, null);
+        System.out.println("==== UNKNOWN FORMULA ====");
+        boolean bUnknown = modelChecker.checkSatisfiability(formulaUnknown, solver, new VecInt(new int[]{3}));
+        modelChecker.printVars();
+        System.out.println("Is satisfiable? = " + bUnknown);
+
+        printStats(solver);
+
+        System.out.println();
+        System.out.println("==== NOT UNKNOWN FORMULA ====");
+        boolean bNotUnknown = modelChecker.checkSatisfiability(formulaNotUnknown, solver, new VecInt(new int[]{-3}));
+        modelChecker.printVars();
+        System.out.println("Is satisfiable? = " + bNotUnknown);
+
+        printStats(solver);
+
+        System.out.println();
+
+        System.out.println("Unknown formulaUnknown satisfiable: " + bUnknown);
+        System.out.println("Not unknown formulaUnknown satisfiable: " + bNotUnknown);
     }
 
     private static void printStats(Solver solver) {

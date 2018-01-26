@@ -18,6 +18,10 @@ public class UnboundedModelChecker {
         threeValuedModelChecker = new ThreeValuedModelChecker(cfgs, maxBound, config);
     }
 
+    public void setCfgs(CFG cfgs) {
+        threeValuedModelChecker.setCfgs(cfgs);
+    }
+
 //    public static Set<Var> satisfiable(Formula f) throws TimeoutException {
 //        ISolver solver = SolverFactory.newMiniLearningHeap();
 //        solver = addClauses(solver, f);
@@ -39,8 +43,8 @@ public class UnboundedModelChecker {
 //        }
 //    }
 
-    public Formula getBaseCaseFormula(Formula ltlPropertyEncoding) {
-        return threeValuedModelChecker.constructFormula(ltlPropertyEncoding);
+    public Formula getBaseCaseFormula(Formula ltlPropertyEncoding, boolean isUnknownFormula) {
+        return threeValuedModelChecker.constructFormula(ltlPropertyEncoding, isUnknownFormula);
     }
 
     Formula safeLoc(int k, int loc) {

@@ -42,7 +42,7 @@ public class Main {
                 ThreeValuedModelChecker modelChecker = new ThreeValuedModelChecker(cfg, bound, config);
 
                 System.out.println("Encoding formula...");
-                Formula formula = modelChecker.constructFormula(null);
+                Formula formula = modelChecker.constructFormula(null, true);
                 Formula unknownFormula = modelChecker.getUnknownFormula(formula);
                 Formula notUnknownFormula = modelChecker.getNotUnknownFormula(formula);
                 long timeUsed = (System.currentTimeMillis() - time);
