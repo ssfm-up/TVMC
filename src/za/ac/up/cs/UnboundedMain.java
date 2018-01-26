@@ -10,10 +10,10 @@ import org.sat4j.specs.IteratorInt;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
+
+import static cnf.CNF.and;
+import static cnf.CNF.neg;
 
 public class UnboundedMain {
 
@@ -43,27 +43,43 @@ public class UnboundedMain {
             System.out.println();
 
             UnboundedModelChecker modelChecker = new UnboundedModelChecker(cfg, maxBound, config);
-            Formula baseCase = modelChecker.getBaseCaseFormula();
+            Formula baseCase = modelChecker.getBaseCaseFormula(null);
             System.out.println("baseCase = " + baseCase);
+
+            // Safety encoding
+            int loc = 1;
+            List<Formula> safetyFormulas = new ArrayList<>();
+            for (int k = 0; k < maxBound - 1; k++) {
+                safetyFormulas.add(modelChecker.safeLoc(k, loc));
+            }
+            safetyFormulas.add(neg(modelChecker.safeLoc(maxBound - 1, loc)));
+            Formula ltlEncoding = and(safetyFormulas);
+            System.out.println("ltlEncoding = " + ltlEncoding);
+            //
+
+            Formula formula = and(baseCase, ltlEncoding);
 
             Solver solver = SolverFactory.newMiniLearningHeap();
 //            boolean b = modelChecker.checkSatisfiability(and(baseCase, neg(UnboundedModelChecker.UNKNOWN)), solver, null);
             System.out.println("==== UNKNOWN FORMULA ====");
-            boolean b = modelChecker.checkSatisfiability(baseCase, solver, new VecInt(new int[]{3}));
+            boolean bUnknown = modelChecker.checkSatisfiability(formula, solver, new VecInt(new int[]{3}));
             modelChecker.printVars();
-            System.out.println("Is satisfiable? = " + b);
+            System.out.println("Is satisfiable? = " + bUnknown);
 
             printStats(solver);
 
             System.out.println();
             System.out.println("==== NOT UNKNOWN FORMULA ====");
-            b = modelChecker.checkSatisfiability(baseCase, solver, new VecInt(new int[]{-3}));
+            boolean bNotUnknown = modelChecker.checkSatisfiability(formula, solver, new VecInt(new int[]{-3}));
             modelChecker.printVars();
-            System.out.println("Is satisfiable? = " + b);
+            System.out.println("Is satisfiable? = " + bNotUnknown);
 
             printStats(solver);
 
+            System.out.println();
 
+            System.out.println("Unknown formula satisfiable: " + bUnknown);
+            System.out.println("Not unknown formula satisfiable: " + bNotUnknown);
 //            solver.addClause()
 //        solver.addAllClauses(clauses); //add a formula consisting of clauses to the solver
 //        solver.addClause(literals);    //add a clause consisting of literals to the solver
@@ -71,9 +87,9 @@ public class UnboundedMain {
 
 
         } catch (IOException e) {
-            System.out.println("IOException");
+            System.out.println("IOException: " + e);
         } catch (NumberFormatException e) {
-            System.out.println("Number format exception");
+            System.out.println("Number format exception: " + e);
         }
 
 

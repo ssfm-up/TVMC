@@ -27,7 +27,7 @@ public class ThreeValuedModelChecker {
     final Map<Var, Integer> predUnknownMap = new HashMap<>();
     final Map<Formula, String> guardUnknownMap = new HashMap<>();
     final int maxBound;
-    boolean checkFairness = true;
+    boolean checkFairness = false;
     Var[][] progress;
     Properties config;
 
@@ -70,7 +70,7 @@ public class ThreeValuedModelChecker {
         return and(formulas);
     }
 
-    private Var locVar(int process, int loc, int bound) {
+    Var locVar(int process, int loc, int bound) {
         return getNamedVar("l_" + process + "_" + loc + "_" + bound);
     }
 
