@@ -47,8 +47,8 @@ public class LogicParser {
         public Formula map(String s) {
             if (s.startsWith("~")) {
                 int pred = Integer.parseInt(s.substring(1));
-                Formula unknown = var(mc.predUnknownVar(process, pred));
-                return or(and(var(predVar(pred, bound, false)), unknown), and(neg(var(predVar(pred, bound, true))), neg(var(predVar(pred, bound, false)))));
+//                Formula unknown = var(mc.predUnknownVar(process, pred));
+                return or(and(var(predVar(pred, bound, false)), unknownVar), and(neg(var(predVar(pred, bound, true))), neg(var(predVar(pred, bound, false)))));
             }
 
             int pred = Integer.parseInt(s);
@@ -57,9 +57,9 @@ public class LogicParser {
     });
 
     private Formula enc(int p) {
-        Formula unknown = var(mc.predUnknownVar(process, p));
+//        Formula unknown = var(mc.predUnknownVar(process, p));
         // return enc(p) where enc(p) = (p[u] /\ u) \/ (~p[u] /\ p[t])
-        return or(and(var(predVar(p, bound, false)), unknown), and(neg(var(predVar(p, bound, false))), var(predVar(p, bound, true))));
+        return or(and(var(predVar(p, bound, false)), unknownVar), and(neg(var(predVar(p, bound, false))), var(predVar(p, bound, true))));
     }
 
     private final Terminals OPERATORS = Terminals.operators("or", "and", "not", "(", ")");
@@ -71,14 +71,16 @@ public class LogicParser {
     private final Map<String, Var> vars;
     private final Formula trueVar;
     private final Formula falseVar;
+    private final Formula unknownVar;
     private final int bound;
     private final int process;
     private final ThreeValuedModelChecker mc;
 
-    public LogicParser(ThreeValuedModelChecker mc, Map<String, Var> vars, Formula trueVar, Formula falseVar, int bound, int process) {
+    public LogicParser(ThreeValuedModelChecker mc, Map<String, Var> vars, Formula trueVar, Formula falseVar, Formula unknownVar, int bound, int process) {
         this.vars = vars;
         this.trueVar = trueVar;
         this.falseVar = falseVar;
+        this.unknownVar = unknownVar;
         this.bound = bound;
         this.process = process;
         this.mc = mc;

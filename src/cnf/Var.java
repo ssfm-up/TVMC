@@ -11,7 +11,7 @@ package cnf;
 
 public final class Var {
 
-  final int number;
+  public final int number;
 
   Var() {
     this.number = CNF.freshName();

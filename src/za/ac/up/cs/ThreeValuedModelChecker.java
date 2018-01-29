@@ -30,7 +30,6 @@ public class ThreeValuedModelChecker {
     boolean checkFairness = false;
     Var[][] progress;
     Properties config;
-    boolean isUnknownFormula = true;
 
     public ThreeValuedModelChecker(CFG cfgs, int maxBound, Properties config) {
         this.cfgs = cfgs;
@@ -112,20 +111,11 @@ public class ThreeValuedModelChecker {
     }
 
     Var predUnknownVar(int process, int pred) {
-        if (checkFairness)
             return getNamedVar("u_" + process + "_p_" + pred);
-
-        if (isUnknownFormula) return new Var(TRUE_VAL + 1);
-        return new Var(FALSE_VAL + 1);
-
     }
 
     Var guardUnknownVar(int process, String guard) {
-        if (checkFairness)
             return getNamedVar("u_" + process + "_g_" + guard);
-
-        if (isUnknownFormula) return new Var(TRUE_VAL + 1);
-        return new Var(FALSE_VAL + 1);
     }
 
     /**
@@ -190,9 +180,7 @@ public class ThreeValuedModelChecker {
         return and(forAllProcesses);
     }
 
-    Formula constructFormula(Formula ltlPropertyEncoding, boolean isUnknownFormula) {
-        this.isUnknownFormula = isUnknownFormula;
-
+    Formula constructFormula(Formula ltlPropertyEncoding) {
         ArrayList<Formula> initialProgressValues = new ArrayList<>();
         ArrayList<Formula> initialState = new ArrayList<>();
 
@@ -335,7 +323,7 @@ public class ThreeValuedModelChecker {
      * @return A Formula representing the encoded transitions
      */
     private Formula encodeTransition(Process cfg, int process, int bound, int r) {
-        LogicParser parser = new LogicParser(this, vars, TRUE, FALSE, bound, process);
+        LogicParser parser = new LogicParser(this, vars, TRUE, FALSE, UNKNOWN, bound, process);
         return cfg.getEncoding(this, process, bound, r, parser);
     }
 

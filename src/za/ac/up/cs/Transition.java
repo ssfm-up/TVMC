@@ -1,6 +1,7 @@
 package za.ac.up.cs;
 
 import cnf.Formula;
+import cnf.Var;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,19 +9,22 @@ import java.util.List;
 import static cnf.CNF.*;
 
 public class Transition {
+    private final Formula unknownVar;
     private int source;
     private int destination;
     private List<Assignment> assignments;
     private String guard;
 
     public Transition() {
+        unknownVar = var(new Var(3));
     }
 
-    public Transition(int source, int destination, String guard, List<Assignment> assignments) {
+    public Transition(int source, int destination, String guard, List<Assignment> assignments, Formula unknownVar) {
         this.source = source;
         this.destination = destination;
         this.guard = guard;
         this.assignments = assignments;
+        this.unknownVar = unknownVar;
     }
 
     int getSource() {
@@ -48,9 +52,9 @@ public class Transition {
         String str = "not(" + bRaw + ")";
         String modifiedB = parserHelper.cleanExpression(str);
         Formula notB = parserHelper.getParser().LOGIC_PARSER.parse(modifiedB);
-        Formula unknown = var(mc.guardUnknownVar(process, guard));
+//        Formula unknown = var(mc.guardUnknownVar(process, guard));
         // return enc(choice(a, b)) where choice(a, b) = (a or not b) and (a or b or unknown)
-        return and(or(a, notB), or(a, b, unknown));
+        return and(or(a, notB), or(a, b, unknownVar));
     }
 
     List<Formula> getAssignmentEncodings(ThreeValuedModelChecker mc, LogicParser parser, int bound, int r) {
