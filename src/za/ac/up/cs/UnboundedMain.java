@@ -45,7 +45,7 @@ public class UnboundedMain {
             System.out.println("===========" + args[1] + "===========");
             modelChecker.setCfgs(cfg2);
             checkSafety(maxBound, modelChecker, solver, loc);
-//            solver.addClause()
+
 //        solver.addAllClauses(clauses); //add a formula consisting of clauses to the solver
 //        solver.addClause(literals);    //add a clause consisting of literals to the solver
 //        solver.isSatisfiable(assumps); // check satisfiability under assumptions e.g. 3 or -3 if 3 represents 'unknown'
@@ -75,17 +75,11 @@ public class UnboundedMain {
 
         Formula formula = and(baseCase, ltlEncoding);
 
-        //            boolean b = modelChecker.checkSatisfiability(and(baseCase, neg(UnboundedModelChecker.UNKNOWN)), solver, null);
         System.out.println("==== UNKNOWN FORMULA ====");
-        ArrayList<Integer> unknownAssumps = new ArrayList<>();
-        for (Map.Entry<String, Var> e : modelChecker.getVars().entrySet()) {
-            if (e.getKey().startsWith("u")) {
-                unknownAssumps.add(e.getValue().number);
-            }
-        }
-        unknownAssumps.add(3);
-        int[] unknownInts = unknownAssumps.stream().mapToInt(x -> x).toArray();
-        boolean bUnknown = modelChecker.checkSatisfiability(formula, solver, new VecInt(unknownInts));
+        ArrayList<Integer> unknownAssumptionList = new ArrayList<>();
+        unknownAssumptionList.add(3);
+        int[] unknownAssumptions = unknownAssumptionList.stream().mapToInt(x -> x).toArray();
+        boolean bUnknown = modelChecker.checkSatisfiability(formula, solver, new VecInt(unknownAssumptions));
         modelChecker.printVars();
         System.out.println("Is satisfiable? = " + bUnknown);
 
@@ -93,16 +87,11 @@ public class UnboundedMain {
 
         System.out.println();
         System.out.println("==== NOT UNKNOWN FORMULA ====");
-        ArrayList<Integer> notUnknownAssumps = new ArrayList<>();
-        for (Map.Entry<String, Var> e : modelChecker.getVars().entrySet()) {
-            if (e.getKey().startsWith("u")) {
-                notUnknownAssumps.add(-e.getValue().number); // Note the negation
-            }
-        }
-        notUnknownAssumps.add(-3);
-        int[] notUnknownInts = notUnknownAssumps.stream().mapToInt(x -> x).toArray();
+        ArrayList<Integer> notUnknownAssumptionList = new ArrayList<>();
+        notUnknownAssumptionList.add(-3);
+        int[] notUnknownAssumptions = notUnknownAssumptionList.stream().mapToInt(x -> x).toArray();
 
-        boolean bNotUnknown = modelChecker.checkSatisfiability(formula, solver, new VecInt(notUnknownInts));
+        boolean bNotUnknown = modelChecker.checkSatisfiability(formula, solver, new VecInt(notUnknownAssumptions));
         modelChecker.printVars();
         System.out.println("Is satisfiable? = " + bNotUnknown);
 
