@@ -1,6 +1,7 @@
 package za.ac.up.cs;
 
 import cnf.Formula;
+import cnf.Var;
 import org.sat4j.core.VecInt;
 import org.sat4j.minisat.SolverFactory;
 import org.sat4j.minisat.core.Solver;
@@ -17,7 +18,7 @@ import static cnf.CNF.neg;
 
 public class UnboundedMain {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         if (args.length > 3) {
             printUsage();
             return;
@@ -50,8 +51,6 @@ public class UnboundedMain {
 //        solver.isSatisfiable(assumps); // check satisfiability under assumptions e.g. 3 or -3 if 3 represents 'unknown'
 
 
-        } catch (IOException e) {
-            System.out.println("IOException: " + e);
         } catch (NumberFormatException e) {
             System.out.println("Number format exception: " + e);
         }
@@ -60,28 +59,33 @@ public class UnboundedMain {
     }
 
     private static void checkSafety(int maxBound, UnboundedModelChecker modelChecker, Solver solver, int loc) {
-        Formula baseCaseUnknown = modelChecker.getBaseCaseFormula(null, true);
-        System.out.println("baseCaseUnknown = " + baseCaseUnknown);
-        Formula baseCaseNotUnknown = modelChecker.getBaseCaseFormula(null, false);
-        System.out.println("baseCaseNotUnknown = " + baseCaseNotUnknown);
+        Formula baseCase = modelChecker.getBaseCaseFormula(null);
+        System.out.println("baseCase = " + baseCase);
         System.out.println();
 
         // Safety encoding
         List<Formula> safetyFormulas = new ArrayList<>();
         for (int k = 0; k < maxBound - 1; k++) {
-            safetyFormulas.add(modelChecker.safeLoc(k, loc));
+            safetyFormulas.add(modelChecker.safeLoc(k, loc, 4));
         }
-        safetyFormulas.add(neg(modelChecker.safeLoc(maxBound - 1, loc)));
+        safetyFormulas.add(neg(modelChecker.safeLoc(maxBound - 1, loc, 4)));
         Formula ltlEncoding = and(safetyFormulas);
         System.out.println("ltlEncoding = " + ltlEncoding);
         //
 
-        Formula formulaUnknown = and(baseCaseUnknown, ltlEncoding);
-        Formula formulaNotUnknown = and(baseCaseNotUnknown, ltlEncoding);
+        Formula formula = and(baseCase, ltlEncoding);
 
-        //            boolean b = modelChecker.checkSatisfiability(and(baseCaseUnknown, neg(UnboundedModelChecker.UNKNOWN)), solver, null);
+        //            boolean b = modelChecker.checkSatisfiability(and(baseCase, neg(UnboundedModelChecker.UNKNOWN)), solver, null);
         System.out.println("==== UNKNOWN FORMULA ====");
-        boolean bUnknown = modelChecker.checkSatisfiability(formulaUnknown, solver, new VecInt(new int[]{3}));
+        ArrayList<Integer> unknownAssumps = new ArrayList<>();
+        for (Map.Entry<String, Var> e : modelChecker.getVars().entrySet()) {
+            if (e.getKey().startsWith("u")) {
+                unknownAssumps.add(e.getValue().number);
+            }
+        }
+        unknownAssumps.add(3);
+        int[] unknownInts = unknownAssumps.stream().mapToInt(x -> x).toArray();
+        boolean bUnknown = modelChecker.checkSatisfiability(formula, solver, new VecInt(unknownInts));
         modelChecker.printVars();
         System.out.println("Is satisfiable? = " + bUnknown);
 
@@ -89,7 +93,16 @@ public class UnboundedMain {
 
         System.out.println();
         System.out.println("==== NOT UNKNOWN FORMULA ====");
-        boolean bNotUnknown = modelChecker.checkSatisfiability(formulaNotUnknown, solver, new VecInt(new int[]{-3}));
+        ArrayList<Integer> notUnknownAssumps = new ArrayList<>();
+        for (Map.Entry<String, Var> e : modelChecker.getVars().entrySet()) {
+            if (e.getKey().startsWith("u")) {
+                notUnknownAssumps.add(-e.getValue().number); // Note the negation
+            }
+        }
+        notUnknownAssumps.add(-3);
+        int[] notUnknownInts = notUnknownAssumps.stream().mapToInt(x -> x).toArray();
+
+        boolean bNotUnknown = modelChecker.checkSatisfiability(formula, solver, new VecInt(notUnknownInts));
         modelChecker.printVars();
         System.out.println("Is satisfiable? = " + bNotUnknown);
 
@@ -97,8 +110,8 @@ public class UnboundedMain {
 
         System.out.println();
 
-        System.out.println("Unknown formulaUnknown satisfiable: " + bUnknown);
-        System.out.println("Not unknown formulaUnknown satisfiable: " + bNotUnknown);
+        System.out.println("Unknown formula satisfiable: " + bUnknown);
+        System.out.println("Not unknown formula satisfiable: " + bNotUnknown);
     }
 
     private static void printStats(Solver solver) {

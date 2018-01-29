@@ -1,9 +1,11 @@
 package za.ac.up.cs;
 
 import cnf.Formula;
+import cnf.Var;
 import org.sat4j.specs.ISolver;
 import org.sat4j.specs.IVecInt;
 
+import java.util.Map;
 import java.util.Properties;
 
 import static cnf.CNF.and;
@@ -43,13 +45,13 @@ public class UnboundedModelChecker {
 //        }
 //    }
 
-    public Formula getBaseCaseFormula(Formula ltlPropertyEncoding, boolean isUnknownFormula) {
-        return threeValuedModelChecker.constructFormula(ltlPropertyEncoding, isUnknownFormula);
+    public Formula getBaseCaseFormula(Formula ltlPropertyEncoding) {
+        return threeValuedModelChecker.constructFormula(ltlPropertyEncoding);
     }
 
-    Formula safeLoc(int k, int loc) {
-        Formula process0 = threeValuedModelChecker.encodeLocation(0, loc, k, 4);
-        Formula process1 = threeValuedModelChecker.encodeLocation(1, loc, k, 4);
+    Formula safeLoc(int k, int loc, int numberOfLocs) {
+        Formula process0 = threeValuedModelChecker.encodeLocation(0, loc, k, numberOfLocs);
+        Formula process1 = threeValuedModelChecker.encodeLocation(1, loc, k, numberOfLocs);
         return neg(and(process0, process1));
     }
 
@@ -73,4 +75,7 @@ public class UnboundedModelChecker {
         threeValuedModelChecker.printVars();
     }
 
+    public Map<String, Var> getVars() {
+        return threeValuedModelChecker.vars;
+    }
 }
