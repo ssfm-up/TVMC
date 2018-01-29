@@ -36,13 +36,13 @@ public class ThreeValuedModelChecker {
         this.maxBound = maxBound;
         this.predMap.putAll(cfgs.getPredicates());
         this.config = config;
-        progress = initialiseProgressFlags();
+//        progress = initialiseProgressFlags();
     }
 
     public void setCfgs(CFG cfgs) {
         this.cfgs = cfgs;
         this.predMap.putAll(cfgs.getPredicates());
-        progress = initialiseProgressFlags();
+//        progress = initialiseProgressFlags();
     }
 
     /**
