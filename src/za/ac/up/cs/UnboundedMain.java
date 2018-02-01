@@ -82,9 +82,9 @@ public class UnboundedMain {
         // Safety encoding
         List<Formula> safetyFormulas = new ArrayList<>();
         for (int k = 0; k < maxBound - 1; k++) {
-            safetyFormulas.add(modelChecker.safeLoc(k, loc, 4));
+            safetyFormulas.add(modelChecker.safeLoc(k, loc, 4, 5));
         }
-        safetyFormulas.add(neg(modelChecker.safeLoc(maxBound - 1, loc, 4)));
+        safetyFormulas.add(neg(modelChecker.safeLoc(maxBound - 1, loc, 4, 5)));
         Formula ltlEncoding = and(safetyFormulas);
         System.out.println("ltlEncoding = " + ltlEncoding);
         //

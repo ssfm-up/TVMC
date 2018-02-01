@@ -5,6 +5,7 @@ import cnf.Var;
 import org.sat4j.specs.ISolver;
 import org.sat4j.specs.IVecInt;
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Properties;
 
@@ -49,10 +50,15 @@ public class UnboundedModelChecker {
         return threeValuedModelChecker.constructFormula(ltlPropertyEncoding);
     }
 
-    Formula safeLoc(int k, int loc, int numberOfLocs) {
-        Formula process0 = threeValuedModelChecker.encodeLocation(0, loc, k, numberOfLocs);
-        Formula process1 = threeValuedModelChecker.encodeLocation(1, loc, k, numberOfLocs);
-        return neg(and(process0, process1));
+    Formula safeLoc(int k, int loc, int numberOfLocs, int processes) {
+//        Formula process0 = threeValuedModelChecker.encodeLocation(0, loc, k, numberOfLocs);
+//        Formula process1 = threeValuedModelChecker.encodeLocation(1, loc, k, numberOfLocs);
+        ArrayList<Formula> formulas = new ArrayList<>();
+        for (int i = 0; i < processes; i++) {
+            formulas.add(threeValuedModelChecker.encodeLocation(i, loc, k, numberOfLocs));
+        }
+
+        return neg(and(formulas));
     }
 
 
