@@ -4,7 +4,10 @@ import cnf.Formula;
 import cnf.Var;
 import org.sat4j.core.VecInt;
 import org.sat4j.minisat.SolverFactory;
+import org.sat4j.minisat.core.Constr;
+import org.sat4j.minisat.core.DataStructureFactory;
 import org.sat4j.minisat.core.Solver;
+import org.sat4j.specs.ContradictionException;
 import org.sat4j.specs.IVec;
 import org.sat4j.specs.IVecInt;
 import org.sat4j.specs.IteratorInt;
@@ -18,7 +21,7 @@ import static cnf.CNF.neg;
 
 public class UnboundedMain {
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, ContradictionException {
         if (args.length > 3) {
             printUsage();
             return;
@@ -37,15 +40,28 @@ public class UnboundedMain {
             Properties config = Helpers.loadConfigurationFile();
             System.out.println();
             UnboundedModelChecker modelChecker = new UnboundedModelChecker(cfg1, maxBound, config);
-            Solver solver = SolverFactory.newMiniLearningHeap();
+            Solver<DataStructureFactory> solver = SolverFactory.newMiniLearningHeap();
 
+            long startTime = System.nanoTime();
             System.out.println("===========" + args[0] + "===========");
             checkSafety(maxBound, modelChecker, solver, loc);
             System.out.println();
             System.out.println("===========" + args[1] + "===========");
             modelChecker.setCfgs(cfg2);
-            checkSafety(maxBound, modelChecker, solver, loc);
 
+            Solver<DataStructureFactory> solver2 = SolverFactory.newMiniLearningHeap();
+            IVec<Constr> learnedConstraints = solver.getLearnedConstraints();
+            Iterator<Constr> iterator = learnedConstraints.iterator();
+
+            while (iterator.hasNext()) {
+                Constr next = iterator.next();
+                solver2.learn(next);
+            }
+
+            checkSafety(maxBound, modelChecker, solver2, loc);
+
+            long endTime = System.nanoTime();
+            System.out.println("Time elapsed: " + (endTime - startTime) / 1e9 + " seconds");
 //        solver.addAllClauses(clauses); //add a formula consisting of clauses to the solver
 //        solver.addClause(literals);    //add a clause consisting of literals to the solver
 //        solver.isSatisfiable(assumps); // check satisfiability under assumptions e.g. 3 or -3 if 3 represents 'unknown'
