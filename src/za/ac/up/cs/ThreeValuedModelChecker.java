@@ -111,11 +111,11 @@ public class ThreeValuedModelChecker {
     }
 
     Var predUnknownVar(int process, int pred) {
-            return getNamedVar("u_" + process + "_p_" + pred);
+        return getNamedVar("u_" + process + "_p_" + pred);
     }
 
     Var guardUnknownVar(int process, String guard) {
-            return getNamedVar("u_" + process + "_g_" + guard);
+        return getNamedVar("u_" + process + "_g_" + guard);
     }
 
     /**

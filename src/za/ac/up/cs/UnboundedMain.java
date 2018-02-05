@@ -1,13 +1,11 @@
 package za.ac.up.cs;
 
 import cnf.Formula;
-import cnf.Var;
 import org.sat4j.core.VecInt;
 import org.sat4j.minisat.SolverFactory;
 import org.sat4j.minisat.core.Constr;
 import org.sat4j.minisat.core.DataStructureFactory;
 import org.sat4j.minisat.core.Solver;
-import org.sat4j.specs.ContradictionException;
 import org.sat4j.specs.IVec;
 import org.sat4j.specs.IVecInt;
 import org.sat4j.specs.IteratorInt;
@@ -21,12 +19,14 @@ import static cnf.CNF.neg;
 
 public class UnboundedMain {
 
-    public static void main(String[] args) throws IOException, ContradictionException {
+    public static void main(String[] args) throws IOException {
         if (args.length > 3) {
             printUsage();
             return;
         }
         int loc = 1;
+        int processes = 5;
+        int numberOfLocs = 4;
 
         try {
             System.out.println(new Date());
@@ -44,21 +44,15 @@ public class UnboundedMain {
 
             long startTime = System.nanoTime();
             System.out.println("===========" + args[0] + "===========");
-            checkSafety(maxBound, modelChecker, solver, loc);
+
+            checkSafety(maxBound, modelChecker, solver, loc, processes, numberOfLocs);
             System.out.println();
             System.out.println("===========" + args[1] + "===========");
             modelChecker.setCfgs(cfg2);
 
-            Solver<DataStructureFactory> solver2 = SolverFactory.newMiniLearningHeap();
-            IVec<Constr> learnedConstraints = solver.getLearnedConstraints();
-            Iterator<Constr> iterator = learnedConstraints.iterator();
+            Solver<DataStructureFactory> solver2 = addLearntClauses(solver);
 
-            while (iterator.hasNext()) {
-                Constr next = iterator.next();
-                solver2.learn(next);
-            }
-
-            checkSafety(maxBound, modelChecker, solver2, loc);
+            checkSafety(maxBound, modelChecker, solver2, loc, processes, numberOfLocs);
 
             long endTime = System.nanoTime();
             System.out.println("Time elapsed: " + (endTime - startTime) / 1e9 + " seconds");
@@ -74,7 +68,19 @@ public class UnboundedMain {
 
     }
 
-    private static void checkSafety(int maxBound, UnboundedModelChecker modelChecker, Solver solver, int loc) {
+    private static Solver<DataStructureFactory> addLearntClauses(Solver<DataStructureFactory> solver) {
+        Solver<DataStructureFactory> solver2 = SolverFactory.newMiniLearningHeap();
+        IVec<Constr> learnedConstraints = solver.getLearnedConstraints();
+        Iterator<Constr> iterator = learnedConstraints.iterator();
+
+        while (iterator.hasNext()) {
+            Constr next = iterator.next();
+            solver2.learn(next);
+        }
+        return solver2;
+    }
+
+    private static void checkSafety(int maxBound, UnboundedModelChecker modelChecker, Solver solver, int loc, int processes, int numberOfLocs) {
         Formula baseCase = modelChecker.getBaseCaseFormula(null);
         System.out.println("baseCase = " + baseCase);
         System.out.println();
@@ -82,9 +88,9 @@ public class UnboundedMain {
         // Safety encoding
         List<Formula> safetyFormulas = new ArrayList<>();
         for (int k = 0; k < maxBound - 1; k++) {
-            safetyFormulas.add(modelChecker.safeLoc(k, loc, 4, 5));
+            safetyFormulas.add(modelChecker.safeLoc(k, loc, numberOfLocs, processes));
         }
-        safetyFormulas.add(neg(modelChecker.safeLoc(maxBound - 1, loc, 4, 5)));
+        safetyFormulas.add(neg(modelChecker.safeLoc(maxBound - 1, loc, numberOfLocs, processes)));
         Formula ltlEncoding = and(safetyFormulas);
         System.out.println("ltlEncoding = " + ltlEncoding);
         //
