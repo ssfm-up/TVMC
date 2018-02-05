@@ -136,6 +136,11 @@ public class CNF {
     return tseitinVisitor.getResultFormula(x);
   }
 
+  public static Formula cnf(Formula f, TseitinVisitor tseitinVisitor) {
+    Integer x = f.accept(tseitinVisitor);
+    return tseitinVisitor.getResultFormula(x);
+  }
+
   /**
    * Gibt eine zur uebergebenen Formel erfuellbarkeitsaequivalente
    * Formel in CNF als String im DIMACS zurueck.

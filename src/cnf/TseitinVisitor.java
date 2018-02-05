@@ -19,6 +19,11 @@ public class TseitinVisitor implements FormulaVisitor<Integer> {
     clauses = new HashSet<Set<Integer>>();
   }
 
+  public TseitinVisitor(Map<Formula, Integer> fmVars) {
+    this.fmVars = fmVars;
+    clauses = new HashSet<Set<Integer>>();
+  }
+
   public Set<Set<Integer>> getClauses() {
     return clauses;
   }

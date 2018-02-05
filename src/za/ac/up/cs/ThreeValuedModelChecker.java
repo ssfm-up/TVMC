@@ -2,6 +2,7 @@ package za.ac.up.cs;
 
 import cnf.CNF;
 import cnf.Formula;
+import cnf.TseitinVisitor;
 import cnf.Var;
 import org.sat4j.minisat.SolverFactory;
 import org.sat4j.specs.ISolver;
@@ -30,12 +31,14 @@ public class ThreeValuedModelChecker {
     boolean checkFairness = false;
     Var[][] progress;
     Properties config;
+    private TseitinVisitor tseitinVisitor;
 
     public ThreeValuedModelChecker(CFG cfgs, int maxBound, Properties config) {
         this.cfgs = cfgs;
         this.maxBound = maxBound;
         this.predMap.putAll(cfgs.getPredicates());
         this.config = config;
+        this.tseitinVisitor = new TseitinVisitor();
 //        progress = initialiseProgressFlags();
     }
 
@@ -237,7 +240,9 @@ public class ThreeValuedModelChecker {
      * @return Is the formula satisfiable
      */
     boolean checkSatisfiability(Formula formula, ISolver solver, IVecInt constraints) {
-        Formula cnfFormula = cnf(formula);
+        tseitinVisitor = new TseitinVisitor(tseitinVisitor.fmVars);
+        Formula cnfFormula = cnf(formula, tseitinVisitor);
+
         try {
             Set<Var> trueVars = CNF.satisfiable(cnfFormula, solver, constraints);
             if (trueVars != null) {
