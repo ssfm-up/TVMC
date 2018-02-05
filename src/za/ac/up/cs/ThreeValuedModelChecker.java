@@ -213,6 +213,35 @@ public class ThreeValuedModelChecker {
         return and(init, transitionEncoding, ltlPropertyEncoding, TRUE, neg(FALSE));
     }
 
+    Formula constructStepFormula(Formula ltlPropertyEncoding, int numProcesses, int numLocs) {
+        Formula transitionEncoding = encodeTransitions(cfgs, maxBound);
+
+        Formula loopFreeK = loopFree(maxBound, numProcesses, numLocs);
+        return and(transitionEncoding, ltlPropertyEncoding, loopFreeK, TRUE, neg(FALSE));
+    }
+
+    Formula loopFree(int k, int numProcesses, int numOfLocs) {
+        ArrayList<Formula> conjunctionFormulas = new ArrayList<>();
+
+        for (int r = 0; r <= k - 1; r++) {
+            for (int r2 = r + 1; r2 <= k; r2++) {
+                ArrayList<Formula> formulas = new ArrayList<>();
+
+                for (int i = 0; i < numProcesses; i++) {
+                    for (int j = 0; j < numOfLocs; j++) {
+                        Formula locR = encodeLocation(i, j, r, numOfLocs);
+                        Formula locR2 = encodeLocation(i, j, r2, numOfLocs);
+                        Formula term1 = and(locR, neg(locR2));
+                        Formula term2 = and(neg(locR), locR2);
+                        formulas.add(or(term1, term2));
+                    }
+                }
+                conjunctionFormulas.add(or(formulas));
+            }
+        }
+        return and(conjunctionFormulas);
+    }
+
     Formula getNotUnknownFormula(Formula formula) {
         return and(formula, neg(UNKNOWN));
     }
@@ -240,7 +269,9 @@ public class ThreeValuedModelChecker {
      * @return Is the formula satisfiable
      */
     boolean checkSatisfiability(Formula formula, ISolver solver, IVecInt constraints) {
-        tseitinVisitor = new TseitinVisitor(tseitinVisitor.fmVars);
+//        tseitinVisitor = new TseitinVisitor(tseitinVisitor.fmVars);
+//        tseitinVisitor.fmVars.forEach((formula1, integer) -> System.out.println(formula1 + " : " + integer));
+        tseitinVisitor = new TseitinVisitor();
         Formula cnfFormula = cnf(formula, tseitinVisitor);
 
         try {

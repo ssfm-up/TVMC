@@ -19,13 +19,16 @@ import static cnf.CNF.neg;
 
 public class UnboundedMain {
 
+    //examples/new/5Philosophers4P.json examples/new/5Philosophers5P.json 5
+    //examples/2Philosophers_1P/2Philosophers_1P.json examples/2Philosophers_2P/2Philosophers_2P.json 5
     public static void main(String[] args) throws IOException {
         if (args.length > 3) {
             printUsage();
             return;
         }
-        int loc = 1;
-        int processes = 5;
+        int loc = 2;
+//        int processes = 5;
+        int processes = 2;
         int numberOfLocs = 4;
 
         try {
@@ -81,27 +84,20 @@ public class UnboundedMain {
     }
 
     private static void checkSafety(int maxBound, UnboundedModelChecker modelChecker, Solver solver, int loc, int processes, int numberOfLocs) {
-        Formula baseCase = modelChecker.getBaseCaseFormula(null);
+        // Safety encoding
+        Formula ltlEncoding = modelChecker.generateSafetyEncodingFormula(maxBound, loc, processes, numberOfLocs);
+        System.out.println("ltlEncoding = " + ltlEncoding);
+
+
+        Formula baseCase = modelChecker.getBaseCaseFormula(ltlEncoding);
         System.out.println("baseCase = " + baseCase);
         System.out.println();
-
-        // Safety encoding
-        List<Formula> safetyFormulas = new ArrayList<>();
-        for (int k = 0; k < maxBound - 1; k++) {
-            safetyFormulas.add(modelChecker.safeLoc(k, loc, numberOfLocs, processes));
-        }
-        safetyFormulas.add(neg(modelChecker.safeLoc(maxBound - 1, loc, numberOfLocs, processes)));
-        Formula ltlEncoding = and(safetyFormulas);
-        System.out.println("ltlEncoding = " + ltlEncoding);
-        //
-
-        Formula formula = and(baseCase, ltlEncoding);
 
         System.out.println("==== UNKNOWN FORMULA ====");
         ArrayList<Integer> unknownAssumptionList = new ArrayList<>();
         unknownAssumptionList.add(3);
         int[] unknownAssumptions = unknownAssumptionList.stream().mapToInt(x -> x).toArray();
-        boolean bUnknown = modelChecker.checkSatisfiability(formula, solver, new VecInt(unknownAssumptions));
+        boolean bUnknown = modelChecker.checkSatisfiability(baseCase, solver, new VecInt(unknownAssumptions));
         modelChecker.printVars();
         System.out.println("Is satisfiable? = " + bUnknown);
 
@@ -113,7 +109,7 @@ public class UnboundedMain {
         notUnknownAssumptionList.add(-3);
         int[] notUnknownAssumptions = notUnknownAssumptionList.stream().mapToInt(x -> x).toArray();
 
-        boolean bNotUnknown = modelChecker.checkSatisfiability(formula, solver, new VecInt(notUnknownAssumptions));
+        boolean bNotUnknown = modelChecker.checkSatisfiability(baseCase, solver, new VecInt(notUnknownAssumptions));
         modelChecker.printVars();
         System.out.println("Is satisfiable? = " + bNotUnknown);
 
@@ -123,6 +119,9 @@ public class UnboundedMain {
 
         System.out.println("Unknown formula satisfiable: " + bUnknown);
         System.out.println("Not unknown formula satisfiable: " + bNotUnknown);
+
+        Formula step = modelChecker.getStepFormula(ltlEncoding, processes, numberOfLocs);
+        System.out.println("step = " + step);
     }
 
     private static void printStats(Solver solver) {

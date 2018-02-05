@@ -6,6 +6,7 @@ import org.sat4j.specs.ISolver;
 import org.sat4j.specs.IVecInt;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -28,6 +29,10 @@ public class UnboundedModelChecker {
         return threeValuedModelChecker.constructFormula(ltlPropertyEncoding);
     }
 
+    Formula getStepFormula(Formula ltlPropertyEncoding, int numProcesses, int numLocs) {
+        return threeValuedModelChecker.constructStepFormula(ltlPropertyEncoding, numProcesses, numLocs);
+    }
+
     Formula safeLoc(int k, int loc, int numberOfLocs, int processes) {
         ArrayList<Formula> formulas = new ArrayList<>();
         for (int i = 0; i < processes; i++) {
@@ -37,6 +42,14 @@ public class UnboundedModelChecker {
         return neg(and(formulas));
     }
 
+    Formula generateSafetyEncodingFormula(int maxBound, int loc, int processes, int numberOfLocs) {
+        List<Formula> safetyFormulas = new ArrayList<>();
+        for (int k = 0; k < maxBound - 1; k++) {
+            safetyFormulas.add(safeLoc(k, loc, numberOfLocs, processes));
+        }
+        safetyFormulas.add(neg(safeLoc(maxBound - 1, loc, numberOfLocs, processes)));
+        return and(safetyFormulas);
+    }
 
     /**
      * Check is a satisfying assignment for a formula can be found
