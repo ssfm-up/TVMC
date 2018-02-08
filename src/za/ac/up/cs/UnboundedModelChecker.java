@@ -44,10 +44,10 @@ public class UnboundedModelChecker {
 
     Formula generateSafetyEncodingFormula(int maxBound, int loc, int processes, int numberOfLocs) {
         List<Formula> safetyFormulas = new ArrayList<>();
-        for (int k = 0; k < maxBound - 1; k++) {
+        for (int k = 0; k <= maxBound - 1; k++) {
             safetyFormulas.add(safeLoc(k, loc, numberOfLocs, processes));
         }
-        safetyFormulas.add(neg(safeLoc(maxBound - 1, loc, numberOfLocs, processes)));
+        safetyFormulas.add(neg(safeLoc(maxBound, loc, numberOfLocs, processes)));
         return and(safetyFormulas);
     }
 
