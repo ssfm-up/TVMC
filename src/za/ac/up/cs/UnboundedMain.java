@@ -14,9 +14,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
 
-import static cnf.CNF.and;
-import static cnf.CNF.neg;
-
 public class UnboundedMain {
 
     //examples/new/5Philosophers4P.json examples/new/5Philosophers5P.json 5
@@ -50,15 +47,24 @@ public class UnboundedMain {
 
             checkSafety(maxBound, modelChecker, solver, loc, processes, numberOfLocs);
             System.out.println();
+            Map<Formula, Integer> first = new HashMap<>(modelChecker.threeValuedModelChecker.tseitinVisitor.fmVars);
+
             System.out.println("===========" + args[1] + "===========");
             modelChecker.setCfgs(cfg2);
 
             Solver<DataStructureFactory> solver2 = addLearntClauses(solver);
 
             checkSafety(maxBound, modelChecker, solver2, loc, processes, numberOfLocs);
+            Map<Formula, Integer> second = modelChecker.threeValuedModelChecker.tseitinVisitor.fmVars;
 
             long endTime = System.nanoTime();
             System.out.println("Time elapsed: " + (endTime - startTime) / 1e9 + " seconds");
+
+            second.forEach((formula, integer) -> {
+                if (first.get(formula) == null) System.out.println("First does not contain: " + formula);
+                else if (first.get(formula).equals(integer)) System.out.println("Equal values: " + formula);
+                else System.out.println("Not equal values");
+            });
 //        solver.addAllClauses(clauses); //add a formula consisting of clauses to the solver
 //        solver.addClause(literals);    //add a clause consisting of literals to the solver
 //        solver.isSatisfiable(assumps); // check satisfiability under assumptions e.g. 3 or -3 if 3 represents 'unknown'

@@ -281,9 +281,8 @@ public class CNF {
     }
   }
 
-  public static Set<Var> satisfiable(Formula f, ISolver solver, IVecInt constraints) throws TimeoutException {
-    TseitinVisitor tseitinVisitor = new TseitinVisitor();
-    Integer x = f.accept(tseitinVisitor);
+  public static Set<Var> satisfiable(Formula f, ISolver solver, IVecInt constraints, TseitinVisitor tseitinVisitor, int x) throws TimeoutException {
+//    Integer x = f.accept(tseitinVisitor);
     Set<Set<Integer>> clauses = tseitinVisitor.getClauses();
 
     int maxVar = nextName;

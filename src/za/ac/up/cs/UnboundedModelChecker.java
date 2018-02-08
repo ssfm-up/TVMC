@@ -15,7 +15,7 @@ import static cnf.CNF.neg;
 
 public class UnboundedModelChecker {
     public static final Formula UNKNOWN = ThreeValuedModelChecker.UNKNOWN;
-    private final ThreeValuedModelChecker threeValuedModelChecker;
+     final ThreeValuedModelChecker threeValuedModelChecker;
 
     public UnboundedModelChecker(CFG cfgs, int maxBound, Properties config) {
         threeValuedModelChecker = new ThreeValuedModelChecker(cfgs, maxBound, config);

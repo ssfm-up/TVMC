@@ -31,7 +31,7 @@ public class ThreeValuedModelChecker {
     boolean checkFairness = false;
     Var[][] progress;
     Properties config;
-    private TseitinVisitor tseitinVisitor;
+    TseitinVisitor tseitinVisitor;
 
     public ThreeValuedModelChecker(CFG cfgs, int maxBound, Properties config) {
         this.cfgs = cfgs;
@@ -269,13 +269,15 @@ public class ThreeValuedModelChecker {
      * @return Is the formula satisfiable
      */
     boolean checkSatisfiability(Formula formula, ISolver solver, IVecInt constraints) {
-//        tseitinVisitor = new TseitinVisitor(tseitinVisitor.fmVars);
+        tseitinVisitor = new TseitinVisitor(tseitinVisitor.fmVars);
 //        tseitinVisitor.fmVars.forEach((formula1, integer) -> System.out.println(formula1 + " : " + integer));
-        tseitinVisitor = new TseitinVisitor();
-        Formula cnfFormula = cnf(formula, tseitinVisitor);
+//        tseitinVisitor = new TseitinVisitor();
+        Integer x = formula.accept(tseitinVisitor);
+        Formula cnfFormula = tseitinVisitor.getResultFormula(x);
+//        Formula cnfFormula = cnf(formula, tseitinVisitor);
 
         try {
-            Set<Var> trueVars = CNF.satisfiable(cnfFormula, solver, constraints);
+            Set<Var> trueVars = CNF.satisfiable(cnfFormula, solver, constraints, tseitinVisitor, x);
             if (trueVars != null) {
                 System.out.println("SATISFIABLE");
                 System.out.println("True Variables:");

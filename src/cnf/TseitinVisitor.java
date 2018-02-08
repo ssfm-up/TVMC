@@ -28,7 +28,7 @@ public class TseitinVisitor implements FormulaVisitor<Integer> {
     return clauses;
   }
 
-  Formula getResultFormula(Integer x) {
+  public Formula getResultFormula(Integer x) {
     List<Formula> clfms = new LinkedList<Formula>();
     clfms.add(var (new Var(x)));
     for (Set<Integer> c : clauses) {
@@ -60,11 +60,21 @@ public class TseitinVisitor implements FormulaVisitor<Integer> {
   }
 
   public Integer visitVar(FormulaVar fm) {
+    Integer hashVal = fmVars.get(fm);
+      if (hashVal != null) {
+          return hashVal;
+      }
+
     fmVars.put(fm, fm.name.number);
     return fm.name.number;
   }
 
   public Integer visitNeg(FormulaNeg fm) {
+    Integer hashVal = fmVars.get(fm);
+      if (hashVal != null) {
+          return hashVal;
+      }
+
     Integer xbody = fmVars.get(fm.fm);
     if (xbody == null) {
       xbody = fm.fm.accept(this);
@@ -83,6 +93,11 @@ public class TseitinVisitor implements FormulaVisitor<Integer> {
   }
 
   public Integer visitOr(FormulaOr fm) {
+    Integer hashVal = fmVars.get(fm);
+    if (hashVal != null) {
+        return hashVal;
+    }
+
     List<Integer> xs = new LinkedList<Integer>();
     for (Formula f : fm.fms) {
       Integer x = fmVars.get(f);
@@ -110,6 +125,11 @@ public class TseitinVisitor implements FormulaVisitor<Integer> {
   }
 
   public Integer visitAnd(FormulaAnd fm) {
+    Integer hashVal = fmVars.get(fm);
+      if (hashVal != null) {
+          return hashVal;
+      }
+
     List<Integer> xs = new LinkedList<Integer>();
     for (Formula f : fm.fms) {
       Integer x = fmVars.get(f);
