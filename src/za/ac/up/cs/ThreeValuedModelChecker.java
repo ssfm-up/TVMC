@@ -15,8 +15,8 @@ import static cnf.CNF.*;
 
 public class ThreeValuedModelChecker {
 
-    static final Formula FALSE = var(freshVar());
-    static final Formula TRUE = var(freshVar());
+    private static final Formula FALSE = var(freshVar());
+    private static final Formula TRUE = var(freshVar());
     static final Formula UNKNOWN = var(freshVar());
     static final int FALSE_VAL = 0;
     static final int TRUE_VAL = 1;
@@ -26,11 +26,11 @@ public class ThreeValuedModelChecker {
     final Map<String, Integer> predMap = new HashMap<>();
     final Map<Var, Integer> predUnknownMap = new HashMap<>();
     final Map<Formula, String> guardUnknownMap = new HashMap<>();
-    final int maxBound;
+    private final int maxBound;
     CFG cfgs;
     boolean checkFairness = false;
     Var[][] progress;
-    Properties config;
+    private Properties config;
     TseitinVisitor tseitinVisitor;
 
     public ThreeValuedModelChecker(CFG cfgs, int maxBound, Properties config) {
@@ -79,7 +79,7 @@ public class ThreeValuedModelChecker {
         return and(formulas);
     }
 
-    Var locVar(int process, int loc, int bound) {
+    private Var locVar(int process, int loc, int bound) {
         return getNamedVar("l_" + process + "_" + loc + "_" + bound);
     }
 
@@ -269,8 +269,6 @@ public class ThreeValuedModelChecker {
      * @return Is the formula satisfiable
      */
     boolean checkSatisfiability(Formula formula, ISolver solver, IVecInt constraints) {
-        tseitinVisitor = new TseitinVisitor(tseitinVisitor.fmVars);
-//        tseitinVisitor.fmVars.forEach((formula1, integer) -> System.out.println(formula1 + " : " + integer));
 //        tseitinVisitor = new TseitinVisitor();
         Integer x = formula.accept(tseitinVisitor);
         Formula cnfFormula = tseitinVisitor.getResultFormula(x);

@@ -11,7 +11,7 @@ import static cnf.CNF.*;
 
 public class TseitinVisitor implements FormulaVisitor<Integer> {
 
-  public Map<Formula, Integer> fmVars;
+  Map<Formula, Integer> fmVars;
   Set<Set<Integer>> clauses;
 
   public TseitinVisitor() {

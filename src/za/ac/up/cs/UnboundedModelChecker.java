@@ -15,7 +15,7 @@ import static cnf.CNF.neg;
 
 public class UnboundedModelChecker {
     public static final Formula UNKNOWN = ThreeValuedModelChecker.UNKNOWN;
-     final ThreeValuedModelChecker threeValuedModelChecker;
+    final ThreeValuedModelChecker threeValuedModelChecker;
 
     public UnboundedModelChecker(CFG cfgs, int maxBound, Properties config) {
         threeValuedModelChecker = new ThreeValuedModelChecker(cfgs, maxBound, config);
@@ -33,7 +33,7 @@ public class UnboundedModelChecker {
         return threeValuedModelChecker.constructStepFormula(ltlPropertyEncoding, numProcesses, numLocs);
     }
 
-    Formula safeLoc(int k, int loc, int numberOfLocs, int processes) {
+    private Formula safeLoc(int k, int loc, int numberOfLocs, int processes) {
         ArrayList<Formula> formulas = new ArrayList<>();
         for (int i = 0; i < processes; i++) {
             formulas.add(threeValuedModelChecker.encodeLocation(i, loc, k, numberOfLocs));
