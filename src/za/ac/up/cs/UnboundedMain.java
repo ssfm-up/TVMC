@@ -1,6 +1,7 @@
 package za.ac.up.cs;
 
 import cnf.Formula;
+import org.codehaus.jparsec.functors.Pair;
 import org.sat4j.core.VecInt;
 import org.sat4j.minisat.SolverFactory;
 import org.sat4j.minisat.core.Constr;
@@ -16,53 +17,100 @@ import java.util.*;
 
 public class UnboundedMain {
 
-    //examples/new/5Philosophers4P.json examples/new/5Philosophers5P.json 5
-    //examples/2Philosophers_1P/2Philosophers_1P.json examples/2Philosophers_2P/2Philosophers_2P.json 5
     public static void main(String[] args) throws IOException {
-        if (args.length > 3) {
-            printUsage();
-            return;
-        }
-        int loc = 2;
-//        int processes = 5;
-        int processes = 2;
-        int numberOfLocs = 4;
+        boolean result = start(20, 2, 10, 4);
+        System.out.println("result = " + result);
+    }
 
-        try {
-            System.out.println(new Date());
-            int maxBound = Integer.parseInt(args[2]);
+    /**
+     * Iterates up to maxBound and checks whether an error state is reachable at loc
+     * using induction.
+     *
+     * @param maxBound The maximum bound that will be considered
+     * @param loc The location for which to check whether an error is reachable
+     * @param processes The number of processes
+     * @param numberOfLocs The number of locations in the CFG @TODO automatically figure this out
+     * @return true if an error state is reachable, false otherwise
+     * @throws IOException
+     */
+    static boolean start(int maxBound, int loc, int processes, int numberOfLocs) throws IOException {
+        int predBase = 0;
+        int predStep = 0;
 
-            System.out.println("Max Bound: " + maxBound);
+        Properties config = Helpers.loadConfigurationFile();
 
-            CFG cfg1 = Helpers.readCfg(args[0]);
-            CFG cfg2 = Helpers.readCfg(args[1]);
+        for (int k = 0; k < maxBound; k++) {
+            System.out.println("k = " + k);
 
-            Properties config = Helpers.loadConfigurationFile();
-            System.out.println();
-            UnboundedModelChecker modelChecker = new UnboundedModelChecker(cfg1, maxBound, config);
+            boolean bUnknown = false;
+            boolean bNotUnknown = false;
+            boolean baseRequiresRefinement = true;
+
+            String path = "examples/10philosophers/10Phil" + predBase + "P.json";
+            CFG cfg = Helpers.readCfg(path);
+            UnboundedModelChecker modelChecker = new UnboundedModelChecker(cfg, k, config);
             Solver<DataStructureFactory> solver = SolverFactory.newMiniLearningHeap();
+            Formula ltlEncoding = modelChecker.generateSafetyEncodingFormula(k, loc, processes, numberOfLocs);
 
-            long startTime = System.nanoTime();
-            System.out.println("===========" + args[0] + "===========");
+            while (baseRequiresRefinement) {
+                solver = addLearntClauses(solver);
+                path = "examples/10philosophers/10Phil" + predBase + "P.json";
+                System.out.println("path = " + path);
+                modelChecker.setCfgs(Helpers.readCfg(path));
 
-            checkSafety(maxBound, modelChecker, solver, loc, processes, numberOfLocs);
-            System.out.println();
+                Formula baseCase = modelChecker.getBaseCaseFormula(ltlEncoding);
 
-            System.out.println("===========" + args[1] + "===========");
-            modelChecker.setCfgs(cfg2);
+                bUnknown = modelChecker.checkSatisfiability(baseCase, solver, new VecInt(new int[]{3}));
+                bNotUnknown = modelChecker.checkSatisfiability(baseCase, solver, new VecInt(new int[]{-3}));
 
-            Solver<DataStructureFactory> solver2 = addLearntClauses(solver);
+                // true, false ==> Unknown, so add predicate
+                if (bUnknown && !bNotUnknown) predBase += 1;
+                else baseRequiresRefinement = false;
+            }
 
-            checkSafety(maxBound, modelChecker, solver2, loc, processes, numberOfLocs);
+            if (bUnknown) return true; // true, true ==> Error reachable
+            else if (bNotUnknown) { // false, true ==> invalid
+                System.out.println("Error: (bUnknown, bNotUnknown) = (false, true)");
+                System.exit(1);
+            } else {
+                // false, false ==> Proceed to induction step, k + 1
+                boolean sUnknown = false;
+                boolean sNotUnknown = false;
+                boolean stepRequiresRefinement = true;
 
-            long endTime = System.nanoTime();
-            System.out.println("Time elapsed: " + (endTime - startTime) / 1e9 + " seconds");
+                String stepPath = "examples/10philosophers/10Phil" + predStep + "P.json";
 
-        } catch (NumberFormatException e) {
-            System.out.println("Number format exception: " + e);
+                CFG cfgStep = Helpers.readCfg(stepPath);
+                modelChecker = new UnboundedModelChecker(cfgStep, k + 1, config);
+
+                ltlEncoding = modelChecker.generateSafetyEncodingFormula(k + 1, loc, processes, numberOfLocs);
+
+                solver = SolverFactory.newMiniLearningHeap();
+
+                while (stepRequiresRefinement) {
+                    solver = addLearntClauses(solver);
+
+                    stepPath = "examples/10philosophers/10Phil" + predStep + "P.json";
+                    System.out.println("stepPath = " + stepPath);
+                    modelChecker.setCfgs(Helpers.readCfg(stepPath));
+
+                    Formula step = modelChecker.getStepFormula(ltlEncoding, processes, numberOfLocs);
+
+                    sUnknown = modelChecker.checkSatisfiability(step, solver, new VecInt(new int[]{3}));
+                    sNotUnknown = modelChecker.checkSatisfiability(step, solver, new VecInt(new int[]{-3}));
+
+                    if (sUnknown && !sNotUnknown) predStep += 1;
+                    else stepRequiresRefinement = false;
+                }
+
+                if (!sUnknown && !sNotUnknown) return false;
+
+            }
         }
 
-
+        System.out.println("Could not determine if error is reachable with the current max bound.");
+        System.exit(1);
+        return false;
     }
 
     private static Solver<DataStructureFactory> addLearntClauses(Solver<DataStructureFactory> solver) {
