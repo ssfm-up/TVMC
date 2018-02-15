@@ -1,7 +1,6 @@
 package za.ac.up.cs;
 
 import cnf.Formula;
-import org.codehaus.jparsec.functors.Pair;
 import org.sat4j.core.VecInt;
 import org.sat4j.minisat.SolverFactory;
 import org.sat4j.minisat.core.Constr;
@@ -13,22 +12,28 @@ import org.sat4j.specs.IteratorInt;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Properties;
 
 public class UnboundedMain {
 
     public static void main(String[] args) throws IOException {
-        boolean result = start(20, 2, 10, 4);
+        final long startTime = System.nanoTime();
+        boolean result = start(100, 2, 5, 4);
+        final double duration = (System.nanoTime() - startTime) / 1e9;
         System.out.println("result = " + result);
+        System.out.println("duration = " + duration);
     }
 
     /**
      * Iterates up to maxBound and checks whether an error state is reachable at loc
      * using induction.
      *
-     * @param maxBound The maximum bound that will be considered
-     * @param loc The location for which to check whether an error is reachable
-     * @param processes The number of processes
+     * @param maxBound     The maximum bound that will be considered
+     * @param loc          The location for which to check whether an error is reachable
+     * @param processes    The number of processes
      * @param numberOfLocs The number of locations in the CFG @TODO automatically figure this out
      * @return true if an error state is reachable, false otherwise
      * @throws IOException
@@ -36,6 +41,7 @@ public class UnboundedMain {
     static boolean start(int maxBound, int loc, int processes, int numberOfLocs) throws IOException {
         int predBase = 0;
         int predStep = 0;
+        final String basePath = "examples/" + processes + "philosophers/" + processes + "Phil";
 
         Properties config = Helpers.loadConfigurationFile();
 
@@ -46,7 +52,7 @@ public class UnboundedMain {
             boolean bNotUnknown = false;
             boolean baseRequiresRefinement = true;
 
-            String path = "examples/10philosophers/10Phil" + predBase + "P.json";
+            String path = basePath + predBase + "P.json";
             CFG cfg = Helpers.readCfg(path);
             UnboundedModelChecker modelChecker = new UnboundedModelChecker(cfg, k, config);
             Solver<DataStructureFactory> solver = SolverFactory.newMiniLearningHeap();
@@ -54,7 +60,7 @@ public class UnboundedMain {
 
             while (baseRequiresRefinement) {
                 solver = addLearntClauses(solver);
-                path = "examples/10philosophers/10Phil" + predBase + "P.json";
+                path = basePath + predBase + "P.json";
                 System.out.println("path = " + path);
                 modelChecker.setCfgs(Helpers.readCfg(path));
 
@@ -78,7 +84,7 @@ public class UnboundedMain {
                 boolean sNotUnknown = false;
                 boolean stepRequiresRefinement = true;
 
-                String stepPath = "examples/10philosophers/10Phil" + predStep + "P.json";
+                String stepPath = basePath + predStep + "P.json";
 
                 CFG cfgStep = Helpers.readCfg(stepPath);
                 modelChecker = new UnboundedModelChecker(cfgStep, k + 1, config);
@@ -90,7 +96,7 @@ public class UnboundedMain {
                 while (stepRequiresRefinement) {
                     solver = addLearntClauses(solver);
 
-                    stepPath = "examples/10philosophers/10Phil" + predStep + "P.json";
+                    stepPath = basePath + predStep + "P.json";
                     System.out.println("stepPath = " + stepPath);
                     modelChecker.setCfgs(Helpers.readCfg(stepPath));
 
