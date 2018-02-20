@@ -21,7 +21,8 @@ public class UnboundedMain {
 
     public static void main(String[] args) throws IOException {
         final long startTime = System.nanoTime();
-        boolean result = start(100, 2, 5, 4);
+//        boolean result = start(300, 5, 2, 10);
+        boolean result = start(300, 2, 3);
         final double duration = (System.nanoTime() - startTime) / 1e9;
         System.out.println("result = " + result);
         System.out.println("duration = " + duration);
@@ -34,11 +35,10 @@ public class UnboundedMain {
      * @param maxBound     The maximum bound that will be considered
      * @param loc          The location for which to check whether an error is reachable
      * @param processes    The number of processes
-     * @param numberOfLocs The number of locations in the CFG @TODO automatically figure this out
      * @return true if an error state is reachable, false otherwise
      * @throws IOException
      */
-    static boolean start(int maxBound, int loc, int processes, int numberOfLocs) throws IOException {
+    static boolean start(int maxBound, int loc, int processes) throws IOException {
         int predBase = 0;
         int predStep = 0;
         final String basePath = "examples/" + processes + "philosophers/" + processes + "Phil";
@@ -54,9 +54,11 @@ public class UnboundedMain {
 
             String path = basePath + predBase + "P.json";
             CFG cfg = Helpers.readCfg(path);
+            final int stateCount = cfg.getProcess(0).getStateCount();
+            System.out.println("stateCount = " + stateCount);
             UnboundedModelChecker modelChecker = new UnboundedModelChecker(cfg, k, config);
             Solver<DataStructureFactory> solver = SolverFactory.newMiniLearningHeap();
-            Formula ltlEncoding = modelChecker.generateSafetyEncodingFormula(k, loc, processes, numberOfLocs);
+            Formula ltlEncoding = modelChecker.generateSafetyEncodingFormula(k, loc, processes, stateCount);
 
             while (baseRequiresRefinement) {
                 solver = addLearntClauses(solver);
@@ -89,7 +91,7 @@ public class UnboundedMain {
                 CFG cfgStep = Helpers.readCfg(stepPath);
                 modelChecker = new UnboundedModelChecker(cfgStep, k + 1, config);
 
-                ltlEncoding = modelChecker.generateSafetyEncodingFormula(k + 1, loc, processes, numberOfLocs);
+                ltlEncoding = modelChecker.generateSafetyEncodingFormula(k + 1, loc, processes, stateCount);
 
                 solver = SolverFactory.newMiniLearningHeap();
 
@@ -100,7 +102,7 @@ public class UnboundedMain {
                     System.out.println("stepPath = " + stepPath);
                     modelChecker.setCfgs(Helpers.readCfg(stepPath));
 
-                    Formula step = modelChecker.getStepFormula(ltlEncoding, processes, numberOfLocs);
+                    Formula step = modelChecker.getStepFormula(ltlEncoding, processes, stateCount);
 
                     sUnknown = modelChecker.checkSatisfiability(step, solver, new VecInt(new int[]{3}));
                     sNotUnknown = modelChecker.checkSatisfiability(step, solver, new VecInt(new int[]{-3}));
