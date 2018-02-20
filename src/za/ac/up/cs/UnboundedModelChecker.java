@@ -42,7 +42,7 @@ public class UnboundedModelChecker {
             }
         }
 
-        return or(formulas);
+        return and(formulas);
     }
 
     Formula generateSafetyEncodingFormula(int maxBound, int loc, int processes, int numberOfLocs) {
