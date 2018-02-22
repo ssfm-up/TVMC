@@ -12,29 +12,43 @@ import org.sat4j.specs.IteratorInt;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 public class UnboundedMain {
 
     public static void main(String[] args) throws IOException {
+//        iterateLocations();
         final long startTime = System.nanoTime();
-//        boolean result = start(300, 5, 2, 10);
-        boolean result = start(300, 2, 3);
+        boolean result = start(300, 2, 4);
         final double duration = (System.nanoTime() - startTime) / 1e9;
-        System.out.println("result = " + result);
         System.out.println("duration = " + duration);
+    }
+
+    private static void iterateLocations() throws IOException {
+        List<Double> times = new ArrayList<>();
+        List<Boolean> results = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            final long startTime = System.nanoTime();
+            boolean result = start(300, i, 4);
+            final double duration = (System.nanoTime() - startTime) / 1e9;
+            System.out.println("result = " + result);
+            System.out.println("duration = " + duration);
+            times.add(duration);
+            results.add(result);
+        }
+
+        for (int i = 0; i < times.size(); i++) {
+            System.out.println("loc: " + i + ", time: " + times.get(i) + ", result: " + results.get(i));
+        }
     }
 
     /**
      * Iterates up to maxBound and checks whether an error state is reachable at loc
      * using induction.
      *
-     * @param maxBound     The maximum bound that will be considered
-     * @param loc          The location for which to check whether an error is reachable
-     * @param processes    The number of processes
+     * @param maxBound  The maximum bound that will be considered
+     * @param loc       The location for which to check whether an error is reachable
+     * @param processes The number of processes
      * @return true if an error state is reachable, false otherwise
      * @throws IOException
      */
@@ -58,7 +72,7 @@ public class UnboundedMain {
             System.out.println("stateCount = " + stateCount);
             UnboundedModelChecker modelChecker = new UnboundedModelChecker(cfg, k, config);
             Solver<DataStructureFactory> solver = SolverFactory.newMiniLearningHeap();
-            Formula ltlEncoding = modelChecker.generateSafetyEncodingFormula(k, loc, processes, stateCount);
+            Formula ltlEncoding = modelChecker.generateSafetyEncodingAllProcessesFormula(k, loc, processes, stateCount);
 
             while (baseRequiresRefinement) {
                 solver = addLearntClauses(solver);
@@ -91,7 +105,7 @@ public class UnboundedMain {
                 CFG cfgStep = Helpers.readCfg(stepPath);
                 modelChecker = new UnboundedModelChecker(cfgStep, k + 1, config);
 
-                ltlEncoding = modelChecker.generateSafetyEncodingFormula(k + 1, loc, processes, stateCount);
+                ltlEncoding = modelChecker.generateSafetyEncodingAllProcessesFormula(k + 1, loc, processes, stateCount);
 
                 solver = SolverFactory.newMiniLearningHeap();
 
