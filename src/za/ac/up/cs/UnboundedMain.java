@@ -120,7 +120,7 @@ public class UnboundedMain {
 
                     Formula step = modelChecker.getStepFormula(ltlEncoding, processes, stateCount);
 
-                    final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k).number;
+                    final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k+1).number;
                     sUnknown = modelChecker.checkSatisfiability(step, solver, new VecInt(new int[]{3, -zVarNum}));
                     sNotUnknown = modelChecker.checkSatisfiability(step, solver, new VecInt(new int[]{-3, -zVarNum}));
 

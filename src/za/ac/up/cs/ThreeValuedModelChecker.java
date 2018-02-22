@@ -292,6 +292,8 @@ public class ThreeValuedModelChecker {
                             executionPath.addLocation(key);
                         } else if (key.startsWith("u_")) {
                             // TODO: Add unknown to list for use in refinement
+                        } else if (key.startsWith("z_")) {
+
                         } else {
                             executionPath.addProgressStep(key);
                         }
