@@ -20,6 +20,7 @@ public class UnboundedMain {
 //        iterateLocations();
         final long startTime = System.nanoTime();
         boolean result = start(300, 2, 4);
+        System.out.println("result = " + result);
         final double duration = (System.nanoTime() - startTime) / 1e9;
         System.out.println("duration = " + duration);
     }
@@ -58,6 +59,7 @@ public class UnboundedMain {
         final String basePath = "examples/" + processes + "philosophers/" + processes + "Phil";
 
         Properties config = Helpers.loadConfigurationFile();
+        Solver<DataStructureFactory> solver = SolverFactory.newMiniLearningHeap();
 
         for (int k = 0; k < maxBound; k++) {
             System.out.println("k = " + k);
@@ -71,7 +73,6 @@ public class UnboundedMain {
             final int stateCount = cfg.getProcess(0).getStateCount();
             System.out.println("stateCount = " + stateCount);
             UnboundedModelChecker modelChecker = new UnboundedModelChecker(cfg, k, config);
-            Solver<DataStructureFactory> solver = SolverFactory.newMiniLearningHeap();
             Formula ltlEncoding = modelChecker.generateSafetyEncodingAllProcessesFormula(k, loc, processes, stateCount);
 
             while (baseRequiresRefinement) {
@@ -82,8 +83,9 @@ public class UnboundedMain {
 
                 Formula baseCase = modelChecker.getBaseCaseFormula(ltlEncoding);
 
-                bUnknown = modelChecker.checkSatisfiability(baseCase, solver, new VecInt(new int[]{3}));
-                bNotUnknown = modelChecker.checkSatisfiability(baseCase, solver, new VecInt(new int[]{-3}));
+                final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k).number;
+                bUnknown = modelChecker.checkSatisfiability(baseCase, solver, new VecInt(new int[]{3, -zVarNum}));
+                bNotUnknown = modelChecker.checkSatisfiability(baseCase, solver, new VecInt(new int[]{-3, -zVarNum}));
 
                 // true, false ==> Unknown, so add predicate
                 if (bUnknown && !bNotUnknown) predBase += 1;
@@ -118,8 +120,9 @@ public class UnboundedMain {
 
                     Formula step = modelChecker.getStepFormula(ltlEncoding, processes, stateCount);
 
-                    sUnknown = modelChecker.checkSatisfiability(step, solver, new VecInt(new int[]{3}));
-                    sNotUnknown = modelChecker.checkSatisfiability(step, solver, new VecInt(new int[]{-3}));
+                    final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k).number;
+                    sUnknown = modelChecker.checkSatisfiability(step, solver, new VecInt(new int[]{3, -zVarNum}));
+                    sNotUnknown = modelChecker.checkSatisfiability(step, solver, new VecInt(new int[]{-3, -zVarNum}));
 
                     if (sUnknown && !sNotUnknown) predStep += 1;
                     else stepRequiresRefinement = false;

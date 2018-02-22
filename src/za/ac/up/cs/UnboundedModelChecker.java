@@ -10,8 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import static cnf.CNF.and;
-import static cnf.CNF.neg;
+import static cnf.CNF.*;
 
 public class UnboundedModelChecker {
     public static final Formula UNKNOWN = ThreeValuedModelChecker.UNKNOWN;
@@ -59,9 +58,14 @@ public class UnboundedModelChecker {
     Formula generateSafetyEncodingAllProcessesFormula(int maxBound, int loc, int processes, int numberOfLocs) {
         List<Formula> safetyFormulas = new ArrayList<>();
         for (int k = 0; k <= maxBound - 1; k++) {
-            safetyFormulas.add(neg(unsafeAllAtLoc(k, loc, numberOfLocs, processes)));
+            final Formula safe = neg(unsafeAllAtLoc(k, loc, numberOfLocs, processes));
+            final Formula zVar = var(threeValuedModelChecker.zVar(k));
+            safetyFormulas.add(and(iff(safe, zVar), zVar));
         }
-        safetyFormulas.add(unsafeAllAtLoc(maxBound, loc, numberOfLocs, processes));
+        final Formula safe = neg(unsafeAllAtLoc(maxBound, loc, numberOfLocs, processes));
+        final Formula zVar = var(threeValuedModelChecker.zVar(maxBound));
+        safetyFormulas.add(iff(safe, zVar));
+
         return and(safetyFormulas);
     }
 

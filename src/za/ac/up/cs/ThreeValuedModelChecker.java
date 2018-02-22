@@ -83,6 +83,10 @@ public class ThreeValuedModelChecker {
         return getNamedVar("l_" + process + "_" + loc + "_" + bound);
     }
 
+    Var zVar(int bound) {
+        return getNamedVar("z_" + bound);
+    }
+
     /**
      * See definition 8
      */
