@@ -47,7 +47,7 @@ public class UnboundedModelChecker {
 
     private Formula unsafeAllAtLoc(int k, int loc, int numberOfLocs, int processes) {
         ArrayList<Formula> formulas = new ArrayList<>();
-        for (int i = 0; i < processes - 1; i++) {
+        for (int i = 0; i < processes; i++) {
             Formula locI = threeValuedModelChecker.encodeLocation(i, loc, k, numberOfLocs);
             formulas.add(locI);
         }
