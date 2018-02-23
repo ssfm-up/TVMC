@@ -32,7 +32,7 @@ public class UnboundedModelChecker {
         return threeValuedModelChecker.constructStepFormula(ltlPropertyEncoding, numProcesses, numLocs);
     }
 
-    private Formula safeLoc(int k, int loc, int numberOfLocs, int processes) {
+    Formula safeAnyPairAtLoc(int k, int loc, int numberOfLocs, int processes) {
         ArrayList<Formula> formulas = new ArrayList<>();
         for (int i = 0; i < processes - 1; i++) {
             for (int j = i + 1; j < processes; j++) {
@@ -55,26 +55,21 @@ public class UnboundedModelChecker {
         return and(formulas);
     }
 
-    Formula generateSafetyEncodingAllProcessesFormula(int maxBound, int loc, int processes, int numberOfLocs) {
+    Formula safeAllAtLoc(int k, int loc, int numberOfLocs, int processes) {
+        return neg(unsafeAllAtLoc(k, loc, numberOfLocs, processes));
+    }
+
+    Formula generateSafetyEncodingFormula(int maxBound, int loc, int processes, int numberOfLocs, SafeLocEncodingFunction f) {
         List<Formula> safetyFormulas = new ArrayList<>();
         for (int k = 0; k <= maxBound - 1; k++) {
-            final Formula safe = neg(unsafeAllAtLoc(k, loc, numberOfLocs, processes));
+            final Formula safe = f.apply(k, loc, numberOfLocs, processes);
             final Formula zVar = var(threeValuedModelChecker.zVar(k));
             safetyFormulas.add(and(iff(safe, zVar), zVar));
         }
-        final Formula safe = neg(unsafeAllAtLoc(maxBound, loc, numberOfLocs, processes));
+        final Formula safe = f.apply(maxBound, loc, numberOfLocs, processes);
         final Formula zVar = var(threeValuedModelChecker.zVar(maxBound));
         safetyFormulas.add(iff(safe, zVar));
 
-        return and(safetyFormulas);
-    }
-
-    Formula generateSafetyEncodingFormula(int maxBound, int loc, int processes, int numberOfLocs) {
-        List<Formula> safetyFormulas = new ArrayList<>();
-        for (int k = 0; k <= maxBound - 1; k++) {
-            safetyFormulas.add(safeLoc(k, loc, numberOfLocs, processes));
-        }
-        safetyFormulas.add(neg(safeLoc(maxBound, loc, numberOfLocs, processes)));
         return and(safetyFormulas);
     }
 

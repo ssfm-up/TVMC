@@ -19,7 +19,7 @@ public class UnboundedMain {
     public static void main(String[] args) throws IOException {
 //        iterateLocations();
         final long startTime = System.nanoTime();
-        boolean result = start(300, 2, 4);
+        boolean result = start(300, 2, 3);
         System.out.println("result = " + result);
         final double duration = (System.nanoTime() - startTime) / 1e9;
         System.out.println("duration = " + duration);
@@ -73,7 +73,7 @@ public class UnboundedMain {
             final int stateCount = cfg.getProcess(0).getStateCount();
             System.out.println("stateCount = " + stateCount);
             UnboundedModelChecker modelChecker = new UnboundedModelChecker(cfg, k, config);
-            Formula ltlEncoding = modelChecker.generateSafetyEncodingAllProcessesFormula(k, loc, processes, stateCount);
+            Formula ltlEncoding = modelChecker.generateSafetyEncodingFormula(k, loc, processes, stateCount, modelChecker::safeAllAtLoc);
 
             while (baseRequiresRefinement) {
                 solver = addLearntClauses(solver);
@@ -107,7 +107,7 @@ public class UnboundedMain {
                 CFG cfgStep = Helpers.readCfg(stepPath);
                 modelChecker = new UnboundedModelChecker(cfgStep, k + 1, config);
 
-                ltlEncoding = modelChecker.generateSafetyEncodingAllProcessesFormula(k + 1, loc, processes, stateCount);
+                ltlEncoding = modelChecker.generateSafetyEncodingFormula(k + 1, loc, processes, stateCount, modelChecker::safeAllAtLoc);
 
                 solver = SolverFactory.newMiniLearningHeap();
 
@@ -120,7 +120,7 @@ public class UnboundedMain {
 
                     Formula step = modelChecker.getStepFormula(ltlEncoding, processes, stateCount);
 
-                    final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k+1).number;
+                    final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k + 1).number;
                     sUnknown = modelChecker.checkSatisfiability(step, solver, new VecInt(new int[]{3, -zVarNum}));
                     sNotUnknown = modelChecker.checkSatisfiability(step, solver, new VecInt(new int[]{-3, -zVarNum}));
 
@@ -150,47 +150,6 @@ public class UnboundedMain {
         return solver2;
     }
 
-    private static void checkSafety(int maxBound, UnboundedModelChecker modelChecker, Solver solver, int loc, int processes, int numberOfLocs) {
-        // Safety encoding
-        Formula ltlEncoding = modelChecker.generateSafetyEncodingFormula(maxBound, loc, processes, numberOfLocs);
-        System.out.println("ltlEncoding = " + ltlEncoding);
-
-
-        Formula baseCase = modelChecker.getBaseCaseFormula(ltlEncoding);
-//        System.out.println("baseCase = " + baseCase);
-        System.out.println();
-
-        System.out.println("==== UNKNOWN FORMULA ====");
-        ArrayList<Integer> unknownAssumptionList = new ArrayList<>();
-        unknownAssumptionList.add(3);
-        int[] unknownAssumptions = unknownAssumptionList.stream().mapToInt(x -> x).toArray();
-        boolean bUnknown = modelChecker.checkSatisfiability(baseCase, solver, new VecInt(unknownAssumptions));
-//        modelChecker.printVars();
-        System.out.println("Is satisfiable? = " + bUnknown);
-
-//        printStats(solver);
-
-        System.out.println();
-        System.out.println("==== NOT UNKNOWN FORMULA ====");
-        ArrayList<Integer> notUnknownAssumptionList = new ArrayList<>();
-        notUnknownAssumptionList.add(-3);
-        int[] notUnknownAssumptions = notUnknownAssumptionList.stream().mapToInt(x -> x).toArray();
-
-        boolean bNotUnknown = modelChecker.checkSatisfiability(baseCase, solver, new VecInt(notUnknownAssumptions));
-//        modelChecker.printVars();
-        System.out.println("Is satisfiable? = " + bNotUnknown);
-
-//        printStats(solver);
-
-        System.out.println();
-
-        System.out.println("Unknown formula satisfiable: " + bUnknown);
-        System.out.println("Not unknown formula satisfiable: " + bNotUnknown);
-
-        Formula step = modelChecker.getStepFormula(ltlEncoding, processes, numberOfLocs);
-//        System.out.println("step = " + step);
-    }
-
     private static void printStats(Solver solver) {
         PrintWriter out = new PrintWriter(System.out);
         solver.printLearntClausesInfos(out, "Learnt clause: ");
@@ -198,7 +157,6 @@ public class UnboundedMain {
         System.out.println();
 
         IVec learnedConstraints = solver.getLearnedConstraints();
-//                IteratorInt iterator = outLearnt.iterator();
         Iterator iterator = learnedConstraints.iterator();
         while (iterator.hasNext()) {
             Object next = iterator.next();
