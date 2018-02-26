@@ -14,6 +14,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
 
+import static cnf.CNF.and;
+
 public class UnboundedMain {
 
     public static void main(String[] args) throws IOException {
@@ -62,10 +64,16 @@ public class UnboundedMain {
         Solver<DataStructureFactory> baseSolver = SolverFactory.newMiniLearningHeap();
         Solver<DataStructureFactory> stepSolver = SolverFactory.newMiniLearningHeap();
         boolean shouldResetStep = false;
-        boolean shouldResetBase = false;
+        boolean shouldResetBase = true;
+
+        Formula ltlEncodingBase;
+        Formula baseCase = null;
+        Formula baseCaseOld = null;
+        UnboundedModelChecker modelChecker = new UnboundedModelChecker(0);
 
         for (int k = 0; k < maxBound; k++) {
             System.out.println("k = " + k);
+            modelChecker.setMaxBound(k);
 
             boolean bUnknown = false;
             boolean bNotUnknown = false;
@@ -74,18 +82,33 @@ public class UnboundedMain {
             String path = basePath + predBase + "P.json";
             CFG cfg = Helpers.readCfg(path);
             final int stateCount = cfg.getProcess(0).getStateCount();
-            UnboundedModelChecker modelChecker = new UnboundedModelChecker(cfg, k, config);
 
-            final SafeLocEncodingFunction safeAllAtLocFunction = modelChecker::safeAllAtLoc;
-            Formula ltlEncoding = modelChecker.generateSafetyEncodingFormula(k, loc, processes, stateCount, safeAllAtLocFunction);
+            final SafeLocEncodingFunction safeAllAtLocFunction = modelChecker::safeAnyPairAtLoc;
 
             while (baseRequiresRefinement) {
-                baseSolver = addLearntClauses(baseSolver);
                 path = basePath + predBase + "P.json";
-                System.out.println("path = " + path);
+                System.out.println("base " + predBase + "p");
                 modelChecker.setCfgs(Helpers.readCfg(path));
 
-                Formula baseCase = modelChecker.getBaseCaseFormula(ltlEncoding);
+                if (shouldResetBase) {
+                    System.out.println("Resetting base case...");
+                    baseSolver = SolverFactory.newMiniLearningHeap();
+                    ltlEncodingBase = modelChecker.generateSafetyEncodingFormula(k, loc, processes, stateCount, safeAllAtLocFunction);
+
+                    baseCase = modelChecker.constructBaseCaseFormula(ltlEncodingBase);
+                    System.out.println("Base case reset:");
+                    modelChecker.printFormula(baseCase);
+
+                    shouldResetBase = false;
+                } else {
+                    System.out.println("Adding to base case...");
+                    baseSolver = addLearntClauses(baseSolver);
+                    final Formula ltlAddition = modelChecker.generateAdditiveSafetyEncoding(k, loc, processes, stateCount, safeAllAtLocFunction);
+                    final Formula addition = modelChecker.constructAdditiveBaseCase(k, ltlAddition);
+                    baseCase = and(baseCaseOld, addition);
+                }
+
+                baseCaseOld = and(baseCase);
 
                 final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k).number;
                 bUnknown = modelChecker.checkSatisfiability(baseCase, baseSolver, new VecInt(new int[]{3, -zVarNum}));
@@ -97,8 +120,6 @@ public class UnboundedMain {
                     shouldResetBase = true;
                 } else {
                     baseRequiresRefinement = false;
-                    if (shouldResetBase) baseSolver = SolverFactory.newMiniLearningHeap();
-                    shouldResetBase = false;
                 }
             }
 
@@ -112,19 +133,22 @@ public class UnboundedMain {
                 boolean sNotUnknown = false;
                 boolean stepRequiresRefinement = true;
 
-                String stepPath = basePath + predStep + "P.json";
+//                String stepPath = basePath + predStep + "P.json";
+//
+//                CFG cfgStep = Helpers.readCfg(stepPath);
+//                modelChecker = new UnboundedModelChecker(cfgStep, k + 1, config);
 
-                CFG cfgStep = Helpers.readCfg(stepPath);
-                modelChecker = new UnboundedModelChecker(cfgStep, k + 1, config);
-
-                ltlEncoding = modelChecker.generateSafetyEncodingFormula(k + 1, loc, processes, stateCount, safeAllAtLocFunction);
-
+                // todo remove
+//                stepSolver = SolverFactory.newMiniLearningHeap();
                 while (stepRequiresRefinement) {
                     stepSolver = addLearntClauses(stepSolver);
 
-                    stepPath = basePath + predStep + "P.json";
-                    System.out.println("stepPath = " + stepPath);
+                    String stepPath = basePath + predStep + "P.json";
+                    System.out.println();
+                    System.out.println("step k=" + (k+1) + " " + predStep + "p");
                     modelChecker.setCfgs(Helpers.readCfg(stepPath));
+                    modelChecker.setMaxBound(k + 1);
+                    Formula ltlEncoding = modelChecker.generateSafetyEncodingFormula(k + 1, loc, processes, stateCount, safeAllAtLocFunction);
 
                     Formula step = modelChecker.getStepFormula(ltlEncoding, processes, stateCount);
 

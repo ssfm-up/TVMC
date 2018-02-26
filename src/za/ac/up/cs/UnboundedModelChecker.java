@@ -20,12 +20,20 @@ public class UnboundedModelChecker {
         threeValuedModelChecker = new ThreeValuedModelChecker(cfgs, maxBound, config);
     }
 
+    public UnboundedModelChecker(int maxbound) {
+        threeValuedModelChecker = new ThreeValuedModelChecker(maxbound);
+    }
+
     public void setCfgs(CFG cfgs) {
         threeValuedModelChecker.setCfgs(cfgs);
     }
 
-    public Formula getBaseCaseFormula(Formula ltlPropertyEncoding) {
+    public Formula constructBaseCaseFormula(Formula ltlPropertyEncoding) {
         return threeValuedModelChecker.constructFormula(ltlPropertyEncoding);
+    }
+
+    Formula constructAdditiveBaseCase(int maxBound, Formula ltlAddition) {
+        return and(threeValuedModelChecker.constructAdditiveBaseCase(maxBound), ltlAddition);
     }
 
     Formula getStepFormula(Formula ltlPropertyEncoding, int numProcesses, int numLocs) {
@@ -73,6 +81,15 @@ public class UnboundedModelChecker {
         return and(safetyFormulas);
     }
 
+    // Generates only the last part of the safety encoding
+    Formula generateAdditiveSafetyEncoding(int maxBound, int loc, int processes, int numberOfLocs, SafeLocEncodingFunction f) {
+        final Formula safe = f.apply(maxBound, loc, numberOfLocs, processes);
+        final Formula zVar = var(threeValuedModelChecker.zVar(maxBound));
+
+        final Formula zKMin1 = var(threeValuedModelChecker.zVar(maxBound - 1));
+        return and(zKMin1, iff(safe, zVar));
+    }
+
     /**
      * Check is a satisfying assignment for a formula can be found
      *
@@ -94,5 +111,13 @@ public class UnboundedModelChecker {
 
     public Map<String, Var> getVars() {
         return threeValuedModelChecker.vars;
+    }
+
+    void printFormula(Formula formula) {
+        threeValuedModelChecker.printFormula(formula);
+    }
+
+    public void setMaxBound(int maxBound) {
+        threeValuedModelChecker.setMaxBound(maxBound);
     }
 }

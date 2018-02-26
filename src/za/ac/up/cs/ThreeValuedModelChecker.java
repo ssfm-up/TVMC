@@ -26,12 +26,17 @@ public class ThreeValuedModelChecker {
     final Map<String, Integer> predMap = new HashMap<>();
     final Map<Var, Integer> predUnknownMap = new HashMap<>();
     final Map<Formula, String> guardUnknownMap = new HashMap<>();
-    private final int maxBound;
+    private int maxBound;
     CFG cfgs;
     boolean checkFairness = false;
     Var[][] progress;
     private Properties config;
     TseitinVisitor tseitinVisitor;
+
+    public ThreeValuedModelChecker(int maxBound) {
+        this.maxBound = maxBound;
+        this.tseitinVisitor = new TseitinVisitor();
+    }
 
     public ThreeValuedModelChecker(CFG cfgs, int maxBound, Properties config) {
         this.cfgs = cfgs;
@@ -217,6 +222,10 @@ public class ThreeValuedModelChecker {
         return and(init, transitionEncoding, ltlPropertyEncoding, TRUE, neg(FALSE));
     }
 
+    Formula constructAdditiveBaseCase(int maxBound) {
+        return encodeTransitions(cfgs, maxBound - 1, maxBound);
+    }
+
     Formula constructStepFormula(Formula ltlPropertyEncoding, int numProcesses, int numLocs) {
         Formula transitionEncoding = encodeTransitions(cfgs, maxBound);
 
@@ -330,6 +339,20 @@ public class ThreeValuedModelChecker {
         System.out.println("=====================================");
     }
 
+    void printFormula(Formula formula) {
+        final String[] formulaString = {formula.toString()};
+
+        vars.forEach((s, var) -> {
+            formulaString[0] = formulaString[0].replaceAll("x" + var.number, s);
+        });
+
+        formulaString[0] = formulaString[0].replaceAll(FALSE.toString(), "FALSE");
+        formulaString[0] = formulaString[0].replaceAll(TRUE.toString(), "TRUE");
+        formulaString[0] = formulaString[0].replaceAll(UNKNOWN.toString(), "UNKNOWN");
+
+        System.out.println(formulaString[0]);
+    }
+
     /**
      * See Definition 10
      *
@@ -338,8 +361,13 @@ public class ThreeValuedModelChecker {
      * @return
      */
     private Formula encodeTransitions(CFG cfgs, int bound) {
+        return encodeTransitions(cfgs, 0, bound);
+    }
+
+    private Formula encodeTransitions(CFG cfgs, int startBound, int maxBound) {
+        if (startBound < 0) startBound = 0;
         List<Formula> formulas = new ArrayList<>();
-        for (int i = 0; i < bound; i++) {
+        for (int i = startBound; i < maxBound; i++) {
 
             List<Formula> processTransitions = new ArrayList<>();
             List<Process> processes = cfgs.getProcesses();
@@ -381,5 +409,9 @@ public class ThreeValuedModelChecker {
                 progressFlags[i][j] = getNamedVar("progress_" + i + "_" + j);
         }
         return progressFlags;
+    }
+
+    public void setMaxBound(int maxBound) {
+        this.maxBound = maxBound;
     }
 }
