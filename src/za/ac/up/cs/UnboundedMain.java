@@ -21,7 +21,7 @@ public class UnboundedMain {
     public static void main(String[] args) throws IOException {
 //        iterateLocations();
         final long startTime = System.nanoTime();
-        boolean result = start(300, 2, 3);
+        boolean result = start(300, 2, 2);
         System.out.println("result = " + result);
         final double duration = (System.nanoTime() - startTime) / 1e9;
         System.out.println("duration = " + duration);
@@ -63,11 +63,11 @@ public class UnboundedMain {
         Properties config = Helpers.loadConfigurationFile();
         Solver<DataStructureFactory> baseSolver = SolverFactory.newMiniLearningHeap();
         Solver<DataStructureFactory> stepSolver = SolverFactory.newMiniLearningHeap();
-        boolean shouldResetStep = false;
+        boolean shouldResetStep = true;
         boolean shouldResetBase = true;
 
-        Formula ltlEncodingBase;
         Formula baseCase = null;
+        Formula step = null;
         Formula baseCaseOld = null;
         UnboundedModelChecker modelChecker = new UnboundedModelChecker(0);
 
@@ -93,7 +93,7 @@ public class UnboundedMain {
                 if (shouldResetBase) {
                     System.out.println("Resetting base case...");
                     baseSolver = SolverFactory.newMiniLearningHeap();
-                    ltlEncodingBase = modelChecker.generateSafetyEncodingFormula(k, loc, processes, stateCount, safeAllAtLocFunction);
+                    Formula ltlEncodingBase = modelChecker.generateSafetyEncodingFormula(k, loc, processes, stateCount, safeAllAtLocFunction);
 
                     baseCase = modelChecker.constructBaseCaseFormula(ltlEncodingBase);
                     System.out.println("Base case reset:");
@@ -133,24 +133,27 @@ public class UnboundedMain {
                 boolean sNotUnknown = false;
                 boolean stepRequiresRefinement = true;
 
-//                String stepPath = basePath + predStep + "P.json";
-//
-//                CFG cfgStep = Helpers.readCfg(stepPath);
-//                modelChecker = new UnboundedModelChecker(cfgStep, k + 1, config);
-
-                // todo remove
-//                stepSolver = SolverFactory.newMiniLearningHeap();
                 while (stepRequiresRefinement) {
-                    stepSolver = addLearntClauses(stepSolver);
-
                     String stepPath = basePath + predStep + "P.json";
                     System.out.println();
                     System.out.println("step k=" + (k+1) + " " + predStep + "p");
                     modelChecker.setCfgs(Helpers.readCfg(stepPath));
                     modelChecker.setMaxBound(k + 1);
-                    Formula ltlEncoding = modelChecker.generateSafetyEncodingFormula(k + 1, loc, processes, stateCount, safeAllAtLocFunction);
 
-                    Formula step = modelChecker.getStepFormula(ltlEncoding, processes, stateCount);
+
+                    if (shouldResetStep) {
+                        stepSolver = SolverFactory.newMiniLearningHeap();
+
+                        Formula ltlEncoding = modelChecker.generateSafetyEncodingFormula(k + 1, loc, processes, stateCount, safeAllAtLocFunction);
+                        step = modelChecker.getStepFormula(ltlEncoding, processes, stateCount);
+
+                        shouldResetStep = false;
+                    } else {
+                        stepSolver = addLearntClauses(stepSolver);
+                        final Formula ltlAddition = modelChecker.generateAdditiveSafetyEncoding(k + 1, loc, processes, stateCount, safeAllAtLocFunction);
+                        final Formula addition = modelChecker.constructAdditiveStepCase(k + 1, ltlAddition, processes, stateCount);
+                        step = and(step, addition);
+                    }
 
                     final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k + 1).number;
                     sUnknown = modelChecker.checkSatisfiability(step, stepSolver, new VecInt(new int[]{3, -zVarNum}));
@@ -161,8 +164,6 @@ public class UnboundedMain {
                         shouldResetStep = true;
                     } else {
                         stepRequiresRefinement = false;
-                        if (shouldResetStep) stepSolver = SolverFactory.newMiniLearningHeap();
-                        shouldResetStep = false;
                     }
                 }
 

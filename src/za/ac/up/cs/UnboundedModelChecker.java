@@ -32,8 +32,12 @@ public class UnboundedModelChecker {
         return threeValuedModelChecker.constructFormula(ltlPropertyEncoding);
     }
 
-    Formula constructAdditiveBaseCase(int maxBound, Formula ltlAddition) {
+    public Formula constructAdditiveBaseCase(int maxBound, Formula ltlAddition) {
         return and(threeValuedModelChecker.constructAdditiveBaseCase(maxBound), ltlAddition);
+    }
+
+    public Formula constructAdditiveStepCase(int maxBound, Formula ltlAddition, int numProcesses, int numOfLocs) {
+        return and(threeValuedModelChecker.constructAdditiveStepCase(maxBound, numProcesses, numOfLocs), ltlAddition);
     }
 
     Formula getStepFormula(Formula ltlPropertyEncoding, int numProcesses, int numLocs) {
