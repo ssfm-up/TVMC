@@ -1,5 +1,6 @@
 package za.ac.up.cs;
 
+import cnf.CNF;
 import cnf.Formula;
 import org.sat4j.core.VecInt;
 import org.sat4j.minisat.SolverFactory;
@@ -60,11 +61,11 @@ public class UnboundedMain {
         int predStep = 0;
         final String basePath = "examples/" + processes + "philosophers/" + processes + "Phil";
 
-        Properties config = Helpers.loadConfigurationFile();
         Solver<DataStructureFactory> baseSolver = SolverFactory.newMiniLearningHeap();
         Solver<DataStructureFactory> stepSolver = SolverFactory.newMiniLearningHeap();
         boolean shouldResetStep = true;
         boolean shouldResetBase = true;
+        final boolean printTrueVars = true;
 
         Formula baseCase = null;
         Formula step = null;
@@ -95,8 +96,6 @@ public class UnboundedMain {
                     Formula ltlEncodingBase = modelChecker.generateSafetyEncodingFormula(k, loc, processes, stateCount, safeAllAtLocFunction);
 
                     baseCase = modelChecker.constructBaseCaseFormula(ltlEncodingBase);
-                    System.out.println("Base case reset:");
-                    modelChecker.printFormula(baseCase);
 
                     shouldResetBase = false;
                 } else {
@@ -108,8 +107,9 @@ public class UnboundedMain {
                 }
 
                 final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k).number;
-                bUnknown = modelChecker.checkSatisfiability(baseCase, baseSolver, new VecInt(new int[]{3, -zVarNum}));
-                bNotUnknown = modelChecker.checkSatisfiability(baseCase, baseSolver, new VecInt(new int[]{-3, -zVarNum}));
+                CNF.addClauses(baseSolver, baseCase);
+                bUnknown = modelChecker.checkSatisfiability(baseSolver, new VecInt(new int[]{3, -zVarNum}), printTrueVars);
+                bNotUnknown = modelChecker.checkSatisfiability(baseSolver, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
 
                 // true, false ==> Unknown, so add predicate
                 if (bUnknown && !bNotUnknown) {
@@ -133,7 +133,7 @@ public class UnboundedMain {
                 while (stepRequiresRefinement) {
                     String stepPath = basePath + predStep + "P.json";
                     System.out.println();
-                    System.out.println("step k=" + (k+1) + " " + predStep + "p");
+                    System.out.println("step k=" + (k + 1) + " " + predStep + "p");
                     modelChecker.setCfgs(Helpers.readCfg(stepPath));
                     modelChecker.setMaxBound(k + 1);
 
@@ -153,8 +153,9 @@ public class UnboundedMain {
                     }
 
                     final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k + 1).number;
-                    sUnknown = modelChecker.checkSatisfiability(step, stepSolver, new VecInt(new int[]{3, -zVarNum}));
-                    sNotUnknown = modelChecker.checkSatisfiability(step, stepSolver, new VecInt(new int[]{-3, -zVarNum}));
+                    CNF.addClauses(stepSolver, step);
+                    sUnknown = modelChecker.checkSatisfiability(stepSolver, new VecInt(new int[]{3, -zVarNum}), printTrueVars);
+                    sNotUnknown = modelChecker.checkSatisfiability(stepSolver, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
 
                     if (sUnknown && !sNotUnknown) {
                         predStep += 1;

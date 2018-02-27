@@ -311,28 +311,7 @@ public class ThreeValuedModelChecker {
         try {
             Set<Var> trueVars = CNF.satisfiable(cnfFormula, solver, constraints, tseitinVisitor, x);
             if (trueVars != null) {
-                System.out.println("SATISFIABLE");
-                System.out.println("True Variables:");
-                Path executionPath = new Path(cfgs, maxBound);
-                for (String key : new TreeSet<>(vars.keySet())) {
-                    if (trueVars.contains(vars.get(key))) {
-                        if (key.startsWith("p_")) {
-                            executionPath.addPredicate(key);
-                        } else if (key.startsWith("l_")) {
-                            executionPath.addLocation(key);
-                        } else if (key.startsWith("u_")) {
-                            // TODO: Add unknown to list for use in refinement
-                        } else if (key.startsWith("z_")) {
-
-                        } else {
-                            executionPath.addProgressStep(key);
-                        }
-                        System.out.println(key);
-                    }
-                }
-                // TODO: Use list of true unknowns here for refinement
-                System.out.println();
-                System.out.println(executionPath);
+                printTrueVars(trueVars);
                 return true;
             } else {
                 System.out.println("NOT SATISFIABLE");
@@ -343,6 +322,55 @@ public class ThreeValuedModelChecker {
             e.printStackTrace();
         }
         return false;
+    }
+
+    boolean checkSatisfiability(ISolver solver, IVecInt constraints, boolean printTrueVars) {
+        try {
+            if (solver.isSatisfiable(constraints)) {
+                int[] model = solver.model();
+                Set<Var> trueVars = new HashSet<>();
+                for (Integer y : model) {
+                    if (y > 0) {
+                        trueVars.add(new Var(y));
+                    }
+                }
+
+                if (printTrueVars) printTrueVars(trueVars);
+                return true;
+            } else {
+                System.out.println("NOT SATISFIABLE");
+                return false;
+            }
+        } catch (TimeoutException e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    private void printTrueVars(Set<Var> trueVars) {
+        System.out.println("SATISFIABLE");
+        System.out.println("True Variables:");
+        Path executionPath = new Path(cfgs, maxBound);
+        for (String key : new TreeSet<>(vars.keySet())) {
+            if (trueVars.contains(vars.get(key))) {
+                if (key.startsWith("p_")) {
+                    executionPath.addPredicate(key);
+                } else if (key.startsWith("l_")) {
+                    executionPath.addLocation(key);
+                } else if (key.startsWith("u_")) {
+                    // TODO: Add unknown to list for use in refinement
+                } else if (key.startsWith("z_")) {
+
+                } else {
+                    executionPath.addProgressStep(key);
+                }
+                System.out.println(key);
+            }
+        }
+        // TODO: Use list of true unknowns here for refinement
+        System.out.println();
+        System.out.println(executionPath);
     }
 
     /**
