@@ -78,9 +78,9 @@ public class UnboundedMain {
             System.out.println("k = " + k);
             modelChecker.setMaxBound(k);
 
-            boolean bUnknown = false;
-            boolean bNotUnknown = false;
-            boolean baseRequiresRefinement = true;
+            boolean bUnknown;
+            boolean bNotUnknown;
+            boolean baseRequiresRefinement = false;
 
             String path = basePath + predBase + "P.json";
             CFG cfg = Helpers.readCfg(path);
@@ -88,40 +88,48 @@ public class UnboundedMain {
 
             final SafeLocEncodingFunction safeAllAtLocFunction = modelChecker::safeAnyPairAtLoc;
 
-            while (baseRequiresRefinement) {
+            do {
                 path = basePath + predBase + "P.json";
                 System.out.println("base " + predBase + "p");
                 modelChecker.setCfgs(Helpers.readCfg(path));
 
-                if (shouldResetBase) {
+                if (!baseRequiresRefinement && shouldResetBase) {
                     System.out.println("Resetting base case...");
                     baseSolver = SolverFactory.newMiniLearningHeap();
                     Formula ltlEncodingBase = modelChecker.generateSafetyEncodingFormula(k, loc, processes, stateCount, safeAllAtLocFunction);
 
                     baseCase = modelChecker.constructBaseCaseFormula(ltlEncodingBase);
+                    CNF.addClauses(baseSolver, baseCase);
 
                     shouldResetBase = false;
-                } else {
-                    System.out.println("Adding to base case...");
+                } else if (baseRequiresRefinement) {
+                    //baseRequiresRefinement && shouldResetBase
+//                    System.out.println("Adding to base case...");
                     baseSolver = addLearntClauses(baseSolver);
+
+                    Formula ltlEncodingBase = modelChecker.generateSafetyEncodingFormula(k, loc, processes, stateCount, safeAllAtLocFunction);
+                    baseCase = modelChecker.constructBaseCaseFormula(ltlEncodingBase);
+                    CNF.addClauses(baseSolver, baseCase);
+                } else {
+                    // !baseRequiresRefinement && !shouldResetBase
                     final Formula ltlAddition = modelChecker.generateAdditiveSafetyEncoding(k, loc, processes, stateCount, safeAllAtLocFunction);
                     final Formula addition = modelChecker.constructAdditiveBaseCase(k, ltlAddition);
-                    baseCase = and(baseCase, addition);
+                    CNF.addClauses(baseSolver, addition);
                 }
 
                 final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k).number;
-                CNF.addClauses(baseSolver, baseCase);
                 bUnknown = modelChecker.checkSatisfiability(baseSolver, new VecInt(new int[]{3, -zVarNum}), printTrueVars);
                 bNotUnknown = modelChecker.checkSatisfiability(baseSolver, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
 
                 // true, false ==> Unknown, so add predicate
                 if (bUnknown && !bNotUnknown) {
                     predBase += 1;
+                    baseRequiresRefinement = true;
                     shouldResetBase = true;
                 } else {
                     baseRequiresRefinement = false;
                 }
-            }
+            } while (baseRequiresRefinement);
 
             if (bUnknown) return true; // true, true ==> Error reachable
             else if (bNotUnknown) { // false, true ==> invalid
@@ -129,11 +137,11 @@ public class UnboundedMain {
                 System.exit(1);
             } else {
                 // false, false ==> Proceed to induction step, k + 1
-                boolean sUnknown = false;
-                boolean sNotUnknown = false;
-                boolean stepRequiresRefinement = true;
+                boolean sUnknown;
+                boolean sNotUnknown;
+                boolean stepRequiresRefinement = false;
 
-                while (stepRequiresRefinement) {
+                do {
                     String stepPath = basePath + predStep + "P.json";
                     System.out.println();
                     System.out.println("step k=" + (k + 1) + " " + predStep + "p");
@@ -141,32 +149,39 @@ public class UnboundedMain {
                     modelChecker.setMaxBound(k + 1);
 
 
-                    if (shouldResetStep) {
+                    if (!stepRequiresRefinement && shouldResetStep) {
                         stepSolver = SolverFactory.newMiniLearningHeap();
 
                         Formula ltlEncoding = modelChecker.generateSafetyEncodingFormula(k + 1, loc, processes, stateCount, safeAllAtLocFunction);
                         step = modelChecker.getStepFormula(ltlEncoding, processes, stateCount);
+                        CNF.addClauses(stepSolver, step);
 
                         shouldResetStep = false;
-                    } else {
+                    } else if (stepRequiresRefinement) {
+                        //stepRequiresRefinement && shouldResetStep
                         stepSolver = addLearntClauses(stepSolver);
+                        Formula ltlEncoding = modelChecker.generateSafetyEncodingFormula(k + 1, loc, processes, stateCount, safeAllAtLocFunction);
+                        step = modelChecker.getStepFormula(ltlEncoding, processes, stateCount);
+                        CNF.addClauses(stepSolver, step);
+                    } else {
+                        // !stepRequiresRefinement && !shouldResetStep
                         final Formula ltlAddition = modelChecker.generateAdditiveSafetyEncoding(k + 1, loc, processes, stateCount, safeAllAtLocFunction);
                         final Formula addition = modelChecker.constructAdditiveStepCase(k + 1, ltlAddition, processes, stateCount);
-                        step = and(step, addition);
+                        CNF.addClauses(stepSolver, addition);
                     }
 
                     final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k + 1).number;
-                    CNF.addClauses(stepSolver, step);
                     sUnknown = modelChecker.checkSatisfiability(stepSolver, new VecInt(new int[]{3, -zVarNum}), printTrueVars);
                     sNotUnknown = modelChecker.checkSatisfiability(stepSolver, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
 
                     if (sUnknown && !sNotUnknown) {
                         predStep += 1;
                         shouldResetStep = true;
+                        stepRequiresRefinement = true;
                     } else {
                         stepRequiresRefinement = false;
                     }
-                }
+                } while (stepRequiresRefinement);
 
                 if (!sUnknown && !sNotUnknown) return false;
 
