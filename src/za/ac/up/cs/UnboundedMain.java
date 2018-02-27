@@ -21,7 +21,7 @@ public class UnboundedMain {
     public static void main(String[] args) throws IOException {
 //        iterateLocations();
         final long startTime = System.nanoTime();
-        boolean result = start(300, 2, 2);
+        boolean result = start(300, 2, 3);
         System.out.println("result = " + result);
         final double duration = (System.nanoTime() - startTime) / 1e9;
         System.out.println("duration = " + duration);
@@ -68,7 +68,6 @@ public class UnboundedMain {
 
         Formula baseCase = null;
         Formula step = null;
-        Formula baseCaseOld = null;
         UnboundedModelChecker modelChecker = new UnboundedModelChecker(0);
 
         for (int k = 0; k < maxBound; k++) {
@@ -105,10 +104,8 @@ public class UnboundedMain {
                     baseSolver = addLearntClauses(baseSolver);
                     final Formula ltlAddition = modelChecker.generateAdditiveSafetyEncoding(k, loc, processes, stateCount, safeAllAtLocFunction);
                     final Formula addition = modelChecker.constructAdditiveBaseCase(k, ltlAddition);
-                    baseCase = and(baseCaseOld, addition);
+                    baseCase = and(baseCase, addition);
                 }
-
-                baseCaseOld = and(baseCase);
 
                 final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k).number;
                 bUnknown = modelChecker.checkSatisfiability(baseCase, baseSolver, new VecInt(new int[]{3, -zVarNum}));
