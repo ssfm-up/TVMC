@@ -230,18 +230,18 @@ public class ThreeValuedModelChecker {
         ArrayList<Formula> conjunctionFormulas = new ArrayList<>();
 
         for (int r = 0; r <= maxBound - 1; r++) {
-                ArrayList<Formula> formulas = new ArrayList<>();
+            ArrayList<Formula> formulas = new ArrayList<>();
 
-                for (int i = 0; i < numProcesses; i++) {
-                    for (int j = 0; j < numOfLocs; j++) {
-                        Formula locR = encodeLocation(i, j, r, numOfLocs);
-                        Formula locR2 = encodeLocation(i, j, maxBound, numOfLocs);
-                        Formula term1 = and(locR, neg(locR2));
-                        Formula term2 = and(neg(locR), locR2);
-                        formulas.add(or(term1, term2));
-                    }
+            for (int i = 0; i < numProcesses; i++) {
+                for (int j = 0; j < numOfLocs; j++) {
+                    Formula locR = encodeLocation(i, j, r, numOfLocs);
+                    Formula locR2 = encodeLocation(i, j, maxBound, numOfLocs);
+                    Formula term1 = and(locR, neg(locR2));
+                    Formula term2 = and(neg(locR), locR2);
+                    formulas.add(or(term1, term2));
                 }
-                conjunctionFormulas.add(or(formulas));
+            }
+            conjunctionFormulas.add(or(formulas));
         }
 
         return and(encodeTransitions(cfgs, maxBound - 1, maxBound), and(conjunctionFormulas));

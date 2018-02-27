@@ -5,7 +5,10 @@ import cnf.Var;
 import org.sat4j.specs.ISolver;
 import org.sat4j.specs.IVecInt;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
 import static cnf.CNF.*;
 
@@ -106,8 +109,8 @@ public class UnboundedModelChecker {
     /**
      * Check is a satisfying assignment for a formula can be found
      *
-     * @param solver      A solver to be used for the satisfiability check
-     * @param constraints The constraints that should not be learned by the solver
+     * @param solver        A solver to be used for the satisfiability check
+     * @param constraints   The constraints that should not be learned by the solver
      * @param printTrueVars Whether to print the true variables
      * @return Is the formula satisfiable
      */
