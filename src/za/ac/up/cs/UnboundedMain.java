@@ -18,14 +18,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import static cnf.CNF.and;
-
 public class UnboundedMain {
 
     public static void main(String[] args) throws IOException {
 //        iterateLocations();
         final long startTime = System.nanoTime();
-        boolean result = start(300, 2, 4);
+        boolean result = start(300, 2, 3);
         System.out.println("result = " + result);
         final double duration = (System.nanoTime() - startTime) / 1e9;
         System.out.println("duration = " + duration);
@@ -64,14 +62,20 @@ public class UnboundedMain {
         int predStep = 0;
         final String basePath = "examples/" + processes + "philosophers/" + processes + "Phil";
 
+        Solver<DataStructureFactory> baseSolverP = SolverFactory.newMiniLearningHeap();
         Solver<DataStructureFactory> baseSolver = SolverFactory.newMiniLearningHeap();
+        Solver<DataStructureFactory> stepSolverP = SolverFactory.newMiniLearningHeap();
         Solver<DataStructureFactory> stepSolver = SolverFactory.newMiniLearningHeap();
         boolean shouldResetStep = true;
         boolean shouldResetBase = true;
         final boolean printTrueVars = true;
+        final boolean kSharing = true;
+        final boolean plusMinSharing = false;
+        final boolean refinementSharing = false;
+
 
         UnboundedModelChecker modelChecker = new UnboundedModelChecker(0);
-        final SafeLocEncodingFunction safeAllAtLocFunction = modelChecker::safeAllAtLoc;
+        final SafeLocEncodingFunction safeAllAtLocFunction = modelChecker::safeAnyPairAtLoc;
 
         for (int k = 0; k < maxBound; k++) {
             System.out.println("k = " + k);
@@ -93,32 +97,72 @@ public class UnboundedMain {
                 Formula baseCase;
                 if (!baseRequiresRefinement && shouldResetBase) {
                     // Next k case, but predicate refinement happened so formula gets reset
-                    baseSolver = SolverFactory.newMiniLearningHeap();
                     Formula ltlEncodingBase = modelChecker.generateSafetyEncodingFormula(k, loc, processes, stateCount, safeAllAtLocFunction);
 
                     baseCase = modelChecker.constructBaseCaseFormula(ltlEncodingBase);
-                    CNF.addClauses(baseSolver, baseCase);
+
+                    if (plusMinSharing) {
+                        baseSolverP = SolverFactory.newMiniLearningHeap();
+                        CNF.addClauses(baseSolverP, baseCase);
+                    } else {
+                        baseSolverP = SolverFactory.newMiniLearningHeap();
+                        baseSolver = SolverFactory.newMiniLearningHeap();
+                        CNF.addClauses(baseSolverP, baseCase);
+                        CNF.addClauses(baseSolver, baseCase);
+                    }
 
                     shouldResetBase = false;
                 } else if (baseRequiresRefinement) {
                     // baseRequiresRefinement && shouldResetBase
                     // Predicate refinement case
-                    baseSolver = addLearntClauses(baseSolver);
-
                     Formula ltlEncodingBase = modelChecker.generateSafetyEncodingFormula(k, loc, processes, stateCount, safeAllAtLocFunction);
                     baseCase = modelChecker.constructBaseCaseFormula(ltlEncodingBase);
-                    CNF.addClauses(baseSolver, baseCase);
+
+                    if (plusMinSharing) {
+                        if (refinementSharing) {
+                            baseSolverP = addLearntClauses(baseSolverP);
+                        } else {
+                            baseSolverP = SolverFactory.newMiniLearningHeap();
+                        }
+                        CNF.addClauses(baseSolverP, baseCase);
+                    } else {
+                        if (refinementSharing) {
+                            baseSolverP = addLearntClauses(baseSolverP);
+                            baseSolver = addLearntClauses(baseSolver);
+                        } else {
+                            baseSolverP = SolverFactory.newMiniLearningHeap();
+                            baseSolver = SolverFactory.newMiniLearningHeap();
+                        }
+
+                        CNF.addClauses(baseSolverP, baseCase);
+                        CNF.addClauses(baseSolver, baseCase);
+                    }
                 } else {
                     // !baseRequiresRefinement && !shouldResetBase
                     // Next k case and predicate refinement did not happen, so just add onto existing formula
                     final Formula ltlAddition = modelChecker.generateAdditiveSafetyEncoding(k, loc, processes, stateCount, safeAllAtLocFunction);
                     final Formula addition = modelChecker.constructAdditiveBaseCase(k, ltlAddition);
-                    CNF.addClauses(baseSolver, addition);
+                    if (plusMinSharing) {
+                        if (!kSharing) baseSolverP.clearLearntClauses();
+
+                        CNF.addClauses(baseSolverP, addition);
+                    } else {
+                        if (!kSharing) {
+                            baseSolverP.clearLearntClauses();
+                            baseSolver.clearLearntClauses();
+                        }
+
+                        CNF.addClauses(baseSolverP, addition);
+                        CNF.addClauses(baseSolver, addition);
+                    }
                 }
 
                 final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k).number;
-                bUnknown = modelChecker.checkSatisfiability(baseSolver, new VecInt(new int[]{3, -zVarNum}), printTrueVars);
-                bNotUnknown = modelChecker.checkSatisfiability(baseSolver, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
+                bUnknown = modelChecker.checkSatisfiability(baseSolverP, new VecInt(new int[]{3, -zVarNum}), printTrueVars);
+                if (plusMinSharing)
+                    bNotUnknown = modelChecker.checkSatisfiability(baseSolverP, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
+                else
+                    bNotUnknown = modelChecker.checkSatisfiability(baseSolver, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
 
                 // true, false ==> Unknown, so add predicate
                 if (bUnknown && !bNotUnknown) {
@@ -150,29 +194,70 @@ public class UnboundedMain {
 
                     Formula step;
                     if (!stepRequiresRefinement && shouldResetStep) {
-                        stepSolver = SolverFactory.newMiniLearningHeap();
-
                         Formula ltlEncoding = modelChecker.generateSafetyEncodingFormula(k + 1, loc, processes, stateCount, safeAllAtLocFunction);
                         step = modelChecker.getStepFormula(ltlEncoding, processes, stateCount);
-                        CNF.addClauses(stepSolver, step);
+
+                        if (plusMinSharing) {
+                            stepSolverP = SolverFactory.newMiniLearningHeap();
+                            CNF.addClauses(stepSolverP, step);
+                        } else {
+                            stepSolverP = SolverFactory.newMiniLearningHeap();
+                            stepSolver = SolverFactory.newMiniLearningHeap();
+                            CNF.addClauses(stepSolverP, step);
+                            CNF.addClauses(stepSolver, step);
+                        }
 
                         shouldResetStep = false;
                     } else if (stepRequiresRefinement) {
                         //stepRequiresRefinement && shouldResetStep
-                        stepSolver = addLearntClauses(stepSolver);
                         Formula ltlEncoding = modelChecker.generateSafetyEncodingFormula(k + 1, loc, processes, stateCount, safeAllAtLocFunction);
                         step = modelChecker.getStepFormula(ltlEncoding, processes, stateCount);
-                        CNF.addClauses(stepSolver, step);
+
+                        if (plusMinSharing) {
+                            if (refinementSharing) {
+                                stepSolverP = addLearntClauses(stepSolverP);
+                            } else {
+                                stepSolverP = SolverFactory.newMiniLearningHeap();
+                            }
+                            CNF.addClauses(stepSolverP, step);
+                        } else {
+                            if (refinementSharing) {
+                                stepSolverP = addLearntClauses(stepSolverP);
+                                stepSolver = addLearntClauses(stepSolver);
+                            } else {
+                                stepSolverP = SolverFactory.newMiniLearningHeap();
+                                stepSolver = SolverFactory.newMiniLearningHeap();
+                            }
+
+                            CNF.addClauses(stepSolverP, step);
+                            CNF.addClauses(stepSolver, step);
+                        }
                     } else {
                         // !stepRequiresRefinement && !shouldResetStep
                         final Formula ltlAddition = modelChecker.generateAdditiveSafetyEncoding(k + 1, loc, processes, stateCount, safeAllAtLocFunction);
                         final Formula addition = modelChecker.constructAdditiveStepCase(k + 1, ltlAddition, processes, stateCount);
-                        CNF.addClauses(stepSolver, addition);
+                        if (plusMinSharing) {
+                            if (!kSharing) stepSolverP.clearLearntClauses();
+
+                            CNF.addClauses(stepSolverP, addition);
+                        } else {
+                            if (!kSharing) {
+                                stepSolverP.clearLearntClauses();
+                                stepSolver.clearLearntClauses();
+                            }
+
+                            CNF.addClauses(stepSolverP, addition);
+                            CNF.addClauses(stepSolver, addition);
+                        }
                     }
 
                     final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k + 1).number;
-                    sUnknown = modelChecker.checkSatisfiability(stepSolver, new VecInt(new int[]{3, -zVarNum}), printTrueVars);
-                    sNotUnknown = modelChecker.checkSatisfiability(stepSolver, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
+                    sUnknown = modelChecker.checkSatisfiability(stepSolverP, new VecInt(new int[]{3, -zVarNum}), printTrueVars);
+
+                    if (plusMinSharing)
+                        sNotUnknown = modelChecker.checkSatisfiability(stepSolverP, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
+                    else
+                        sNotUnknown = modelChecker.checkSatisfiability(stepSolver, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
 
                     if (sUnknown && !sNotUnknown) {
                         predStep += 1;
