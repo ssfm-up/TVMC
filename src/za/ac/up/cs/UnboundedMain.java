@@ -25,7 +25,7 @@ public class UnboundedMain {
     public static void main(String[] args) throws IOException {
 //        iterateLocations();
         final long startTime = System.nanoTime();
-        boolean result = start(300, 2, 3);
+        boolean result = start(300, 2, 4);
         System.out.println("result = " + result);
         final double duration = (System.nanoTime() - startTime) / 1e9;
         System.out.println("duration = " + duration);
@@ -70,9 +70,8 @@ public class UnboundedMain {
         boolean shouldResetBase = true;
         final boolean printTrueVars = true;
 
-        Formula baseCase = null;
-        Formula step = null;
         UnboundedModelChecker modelChecker = new UnboundedModelChecker(0);
+        final SafeLocEncodingFunction safeAllAtLocFunction = modelChecker::safeAllAtLoc;
 
         for (int k = 0; k < maxBound; k++) {
             System.out.println("k = " + k);
@@ -86,15 +85,14 @@ public class UnboundedMain {
             CFG cfg = Helpers.readCfg(path);
             final int stateCount = cfg.getProcess(0).getStateCount();
 
-            final SafeLocEncodingFunction safeAllAtLocFunction = modelChecker::safeAnyPairAtLoc;
-
             do {
                 path = basePath + predBase + "P.json";
                 System.out.println("base " + predBase + "p");
                 modelChecker.setCfgs(Helpers.readCfg(path));
 
+                Formula baseCase;
                 if (!baseRequiresRefinement && shouldResetBase) {
-                    System.out.println("Resetting base case...");
+                    // Next k case, but predicate refinement happened so formula gets reset
                     baseSolver = SolverFactory.newMiniLearningHeap();
                     Formula ltlEncodingBase = modelChecker.generateSafetyEncodingFormula(k, loc, processes, stateCount, safeAllAtLocFunction);
 
@@ -103,8 +101,8 @@ public class UnboundedMain {
 
                     shouldResetBase = false;
                 } else if (baseRequiresRefinement) {
-                    //baseRequiresRefinement && shouldResetBase
-//                    System.out.println("Adding to base case...");
+                    // baseRequiresRefinement && shouldResetBase
+                    // Predicate refinement case
                     baseSolver = addLearntClauses(baseSolver);
 
                     Formula ltlEncodingBase = modelChecker.generateSafetyEncodingFormula(k, loc, processes, stateCount, safeAllAtLocFunction);
@@ -112,6 +110,7 @@ public class UnboundedMain {
                     CNF.addClauses(baseSolver, baseCase);
                 } else {
                     // !baseRequiresRefinement && !shouldResetBase
+                    // Next k case and predicate refinement did not happen, so just add onto existing formula
                     final Formula ltlAddition = modelChecker.generateAdditiveSafetyEncoding(k, loc, processes, stateCount, safeAllAtLocFunction);
                     final Formula addition = modelChecker.constructAdditiveBaseCase(k, ltlAddition);
                     CNF.addClauses(baseSolver, addition);
@@ -149,6 +148,7 @@ public class UnboundedMain {
                     modelChecker.setMaxBound(k + 1);
 
 
+                    Formula step;
                     if (!stepRequiresRefinement && shouldResetStep) {
                         stepSolver = SolverFactory.newMiniLearningHeap();
 
