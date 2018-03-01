@@ -72,6 +72,7 @@ public class UnboundedMain {
         final boolean kSharing = true;
         final boolean plusMinSharing = false;
         final boolean refinementSharing = false;
+        final boolean stepWithInit = true;
 
 
         UnboundedModelChecker modelChecker = new UnboundedModelChecker(0);
@@ -197,7 +198,7 @@ public class UnboundedMain {
                     Formula step;
                     if (!stepRequiresRefinement && shouldResetStep) {
                         Formula ltlEncoding = modelChecker.generateSafetyEncodingFormula(k + 1, loc, processes, stateCount, safeAllAtLocFunction);
-                        step = modelChecker.getStepFormula(ltlEncoding, processes, stateCount);
+                        step = modelChecker.getStepFormula(ltlEncoding, processes, stateCount, stepWithInit);
 
                         if (plusMinSharing) {
                             stepSolverP = SolverFactory.newMiniLearningHeap();
@@ -213,7 +214,7 @@ public class UnboundedMain {
                     } else if (stepRequiresRefinement) {
                         //stepRequiresRefinement && shouldResetStep
                         Formula ltlEncoding = modelChecker.generateSafetyEncodingFormula(k + 1, loc, processes, stateCount, safeAllAtLocFunction);
-                        step = modelChecker.getStepFormula(ltlEncoding, processes, stateCount);
+                        step = modelChecker.getStepFormula(ltlEncoding, processes, stateCount, stepWithInit);
 
                         if (plusMinSharing) {
                             if (refinementSharing) {

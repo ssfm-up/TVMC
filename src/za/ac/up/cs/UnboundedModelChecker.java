@@ -40,8 +40,8 @@ public class UnboundedModelChecker {
         return and(threeValuedModelChecker.constructAdditiveStepCase(maxBound, numProcesses, numOfLocs), ltlAddition);
     }
 
-    Formula getStepFormula(Formula ltlPropertyEncoding, int numProcesses, int numLocs) {
-        return threeValuedModelChecker.constructStepFormula(ltlPropertyEncoding, numProcesses, numLocs);
+    Formula getStepFormula(Formula ltlPropertyEncoding, int numProcesses, int numLocs, boolean stepWithInit) {
+        return threeValuedModelChecker.constructStepFormula(ltlPropertyEncoding, numProcesses, numLocs, stepWithInit);
     }
 
     Formula safeAnyPairAtLoc(int k, int loc, int numberOfLocs, int processes) {

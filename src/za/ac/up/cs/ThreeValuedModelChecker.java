@@ -247,11 +247,26 @@ public class ThreeValuedModelChecker {
         return and(encodeTransitions(cfgs, maxBound - 1, maxBound), and(conjunctionFormulas));
     }
 
-    Formula constructStepFormula(Formula ltlPropertyEncoding, int numProcesses, int numLocs) {
+    Formula constructStepFormula(Formula ltlPropertyEncoding, int numProcesses, int numLocs, boolean stepWithInit) {
         Formula transitionEncoding = encodeTransitions(cfgs, maxBound);
-
         Formula loopFreeK = loopFree(maxBound, numProcesses, numLocs);
-        return and(transitionEncoding, ltlPropertyEncoding, loopFreeK, TRUE, neg(FALSE));
+
+        Formula formula;
+
+        if (stepWithInit) {
+            // Add encoding for initial state so that no predicates are unknown
+            List<Formula> formulas = new ArrayList<>();
+            for (int p = 0; p < cfgs.getNumberOfPredicates(); p++) {
+                final Formula pKnown = neg(var(predVar(p, 0, false)));
+                formulas.add(pKnown);
+            }
+            final Formula init = and(formulas);
+            formula = and(init, transitionEncoding, ltlPropertyEncoding, loopFreeK, TRUE, neg(FALSE));
+        } else {
+            formula = and(transitionEncoding, ltlPropertyEncoding, loopFreeK, TRUE, neg(FALSE));
+        }
+
+        return formula;
     }
 
     Formula loopFree(int k, int numProcesses, int numOfLocs) {
