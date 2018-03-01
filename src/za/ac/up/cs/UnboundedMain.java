@@ -159,10 +159,15 @@ public class UnboundedMain {
 
                 final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k).number;
                 bUnknown = modelChecker.checkSatisfiability(baseSolverP, new VecInt(new int[]{3, -zVarNum}), printTrueVars);
-                if (plusMinSharing)
-                    bNotUnknown = modelChecker.checkSatisfiability(baseSolverP, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
-                else
-                    bNotUnknown = modelChecker.checkSatisfiability(baseSolverM, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
+
+                if (!bUnknown) {
+                    bNotUnknown = false;
+                } else {
+                    if (plusMinSharing)
+                        bNotUnknown = modelChecker.checkSatisfiability(baseSolverP, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
+                    else
+                        bNotUnknown = modelChecker.checkSatisfiability(baseSolverM, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
+                }
 
                 // true, false ==> Unknown, so add predicate
                 if (bUnknown && !bNotUnknown) {
@@ -175,10 +180,7 @@ public class UnboundedMain {
             } while (baseRequiresRefinement);
 
             if (bUnknown) return true; // true, true ==> Error reachable
-            else if (bNotUnknown) { // false, true ==> invalid
-                System.out.println("Error: (bUnknown, bNotUnknown) = (false, true)");
-                System.exit(1);
-            } else {
+            else {
                 // false, false ==> Proceed to induction step, k + 1
                 boolean sUnknown;
                 boolean sNotUnknown;
@@ -252,12 +254,16 @@ public class UnboundedMain {
                     }
 
                     final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k + 1).number;
-                    sUnknown = modelChecker.checkSatisfiability(stepSolverP, new VecInt(new int[]{3, -zVarNum}), printTrueVars);
 
                     if (plusMinSharing)
                         sNotUnknown = modelChecker.checkSatisfiability(stepSolverP, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
                     else
                         sNotUnknown = modelChecker.checkSatisfiability(stepSolverM, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
+
+                    if (sNotUnknown)
+                        sUnknown = true;
+                    else
+                        sUnknown = modelChecker.checkSatisfiability(stepSolverP, new VecInt(new int[]{3, -zVarNum}), printTrueVars);
 
                     if (sUnknown && !sNotUnknown) {
                         predStep += 1;
@@ -268,7 +274,7 @@ public class UnboundedMain {
                     }
                 } while (stepRequiresRefinement);
 
-                if (!sUnknown && !sNotUnknown) return false;
+                if (!sUnknown) return false;
 
             }
         }
