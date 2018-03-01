@@ -63,9 +63,9 @@ public class UnboundedMain {
         final String basePath = "examples/" + processes + "philosophers/" + processes + "Phil";
 
         Solver<DataStructureFactory> baseSolverP = SolverFactory.newMiniLearningHeap();
-        Solver<DataStructureFactory> baseSolver = SolverFactory.newMiniLearningHeap();
+        Solver<DataStructureFactory> baseSolverM = SolverFactory.newMiniLearningHeap();
         Solver<DataStructureFactory> stepSolverP = SolverFactory.newMiniLearningHeap();
-        Solver<DataStructureFactory> stepSolver = SolverFactory.newMiniLearningHeap();
+        Solver<DataStructureFactory> stepSolverM = SolverFactory.newMiniLearningHeap();
         boolean shouldResetStep = true;
         boolean shouldResetBase = true;
         final boolean printTrueVars = true;
@@ -106,9 +106,9 @@ public class UnboundedMain {
                         CNF.addClauses(baseSolverP, baseCase);
                     } else {
                         baseSolverP = SolverFactory.newMiniLearningHeap();
-                        baseSolver = SolverFactory.newMiniLearningHeap();
+                        baseSolverM = SolverFactory.newMiniLearningHeap();
                         CNF.addClauses(baseSolverP, baseCase);
-                        CNF.addClauses(baseSolver, baseCase);
+                        CNF.addClauses(baseSolverM, baseCase);
                     }
 
                     shouldResetBase = false;
@@ -128,14 +128,14 @@ public class UnboundedMain {
                     } else {
                         if (refinementSharing) {
                             baseSolverP = addLearntClauses(baseSolverP);
-                            baseSolver = addLearntClauses(baseSolver);
+                            baseSolverM = addLearntClauses(baseSolverM);
                         } else {
                             baseSolverP = SolverFactory.newMiniLearningHeap();
-                            baseSolver = SolverFactory.newMiniLearningHeap();
+                            baseSolverM = SolverFactory.newMiniLearningHeap();
                         }
 
                         CNF.addClauses(baseSolverP, baseCase);
-                        CNF.addClauses(baseSolver, baseCase);
+                        CNF.addClauses(baseSolverM, baseCase);
                     }
                 } else {
                     // !baseRequiresRefinement && !shouldResetBase
@@ -149,11 +149,11 @@ public class UnboundedMain {
                     } else {
                         if (!kSharing) {
                             baseSolverP.clearLearntClauses();
-                            baseSolver.clearLearntClauses();
+                            baseSolverM.clearLearntClauses();
                         }
 
                         CNF.addClauses(baseSolverP, addition);
-                        CNF.addClauses(baseSolver, addition);
+                        CNF.addClauses(baseSolverM, addition);
                     }
                 }
 
@@ -162,7 +162,7 @@ public class UnboundedMain {
                 if (plusMinSharing)
                     bNotUnknown = modelChecker.checkSatisfiability(baseSolverP, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
                 else
-                    bNotUnknown = modelChecker.checkSatisfiability(baseSolver, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
+                    bNotUnknown = modelChecker.checkSatisfiability(baseSolverM, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
 
                 // true, false ==> Unknown, so add predicate
                 if (bUnknown && !bNotUnknown) {
@@ -202,9 +202,9 @@ public class UnboundedMain {
                             CNF.addClauses(stepSolverP, step);
                         } else {
                             stepSolverP = SolverFactory.newMiniLearningHeap();
-                            stepSolver = SolverFactory.newMiniLearningHeap();
+                            stepSolverM = SolverFactory.newMiniLearningHeap();
                             CNF.addClauses(stepSolverP, step);
-                            CNF.addClauses(stepSolver, step);
+                            CNF.addClauses(stepSolverM, step);
                         }
 
                         shouldResetStep = false;
@@ -223,14 +223,14 @@ public class UnboundedMain {
                         } else {
                             if (refinementSharing) {
                                 stepSolverP = addLearntClauses(stepSolverP);
-                                stepSolver = addLearntClauses(stepSolver);
+                                stepSolverM = addLearntClauses(stepSolverM);
                             } else {
                                 stepSolverP = SolverFactory.newMiniLearningHeap();
-                                stepSolver = SolverFactory.newMiniLearningHeap();
+                                stepSolverM = SolverFactory.newMiniLearningHeap();
                             }
 
                             CNF.addClauses(stepSolverP, step);
-                            CNF.addClauses(stepSolver, step);
+                            CNF.addClauses(stepSolverM, step);
                         }
                     } else {
                         // !stepRequiresRefinement && !shouldResetStep
@@ -243,11 +243,11 @@ public class UnboundedMain {
                         } else {
                             if (!kSharing) {
                                 stepSolverP.clearLearntClauses();
-                                stepSolver.clearLearntClauses();
+                                stepSolverM.clearLearntClauses();
                             }
 
                             CNF.addClauses(stepSolverP, addition);
-                            CNF.addClauses(stepSolver, addition);
+                            CNF.addClauses(stepSolverM, addition);
                         }
                     }
 
@@ -257,7 +257,7 @@ public class UnboundedMain {
                     if (plusMinSharing)
                         sNotUnknown = modelChecker.checkSatisfiability(stepSolverP, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
                     else
-                        sNotUnknown = modelChecker.checkSatisfiability(stepSolver, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
+                        sNotUnknown = modelChecker.checkSatisfiability(stepSolverM, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
 
                     if (sUnknown && !sNotUnknown) {
                         predStep += 1;
