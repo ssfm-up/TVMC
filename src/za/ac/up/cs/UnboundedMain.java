@@ -69,6 +69,7 @@ public class UnboundedMain {
         boolean shouldResetStep = true;
         boolean shouldResetBase = true;
         final boolean printTrueVars = true;
+        final boolean printSatTimes = true;
         final boolean kSharing = true;
         final boolean plusMinSharing = false;
         final boolean refinementSharing = false;
@@ -159,8 +160,14 @@ public class UnboundedMain {
                 }
 
                 final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k).number;
-                bUnknown = modelChecker.checkSatisfiability(baseSolverP, new VecInt(new int[]{3, -zVarNum}), printTrueVars);
 
+                long satStartTime = System.nanoTime();
+                bUnknown = modelChecker.checkSatisfiability(baseSolverP, new VecInt(new int[]{3, -zVarNum}), printTrueVars);
+                long satDuration = System.nanoTime() - satStartTime;
+                if (printSatTimes)
+                    System.out.println("satDuration = " + satDuration / 1e9);
+
+                satStartTime = System.nanoTime();
                 if (!bUnknown) {
                     bNotUnknown = false;
                 } else {
@@ -169,6 +176,9 @@ public class UnboundedMain {
                     else
                         bNotUnknown = modelChecker.checkSatisfiability(baseSolverM, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
                 }
+                satDuration = System.nanoTime() - satStartTime;
+                if (printSatTimes)
+                    System.out.println("satDuration = " + satDuration / 1e9);
 
                 // true, false ==> Unknown, so add predicate
                 if (bUnknown && !bNotUnknown) {
@@ -256,15 +266,23 @@ public class UnboundedMain {
 
                     final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k + 1).number;
 
+                    long satStartTime = System.nanoTime();
                     if (plusMinSharing)
                         sNotUnknown = modelChecker.checkSatisfiability(stepSolverP, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
                     else
                         sNotUnknown = modelChecker.checkSatisfiability(stepSolverM, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
+                    long satDuration = System.nanoTime() - satStartTime;
+                    if (printSatTimes)
+                        System.out.println("satDuration = " + satDuration / 1e9);
 
+                    satStartTime = System.nanoTime();
                     if (sNotUnknown)
                         sUnknown = true;
                     else
                         sUnknown = modelChecker.checkSatisfiability(stepSolverP, new VecInt(new int[]{3, -zVarNum}), printTrueVars);
+                    satDuration = System.nanoTime() - satStartTime;
+                    if (printSatTimes)
+                        System.out.println("satDuration = " + satDuration / 1e9);
 
                     if (sUnknown && !sNotUnknown) {
                         predStep += 1;
