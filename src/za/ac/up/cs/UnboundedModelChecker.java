@@ -9,12 +9,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.stream.IntStream;
 
 import static cnf.CNF.*;
 
 public class UnboundedModelChecker {
     public static final Formula UNKNOWN = ThreeValuedModelChecker.UNKNOWN;
     final ThreeValuedModelChecker threeValuedModelChecker;
+    private ArrayList<Integer[]> combinations = null;
 
     public UnboundedModelChecker(CFG cfgs, int maxBound, Properties config) {
         threeValuedModelChecker = new ThreeValuedModelChecker(cfgs, maxBound, config);
@@ -55,6 +57,38 @@ public class UnboundedModelChecker {
         }
 
         return and(formulas);
+    }
+
+    Formula safeAnyPMin1CombinationAtLoc(int k, int loc, int numberOfLocs, int processes) {
+        if (combinations == null) {
+            combinations = new ArrayList<>();
+            combinations(IntStream.range(0, processes).toArray(), processes - 1, 0, new Integer[processes - 1], combinations);
+        }
+
+        ArrayList<Formula> formulas = new ArrayList<>();
+        for (Integer[] processCombination : combinations) {
+            ArrayList<Formula> conjunction = new ArrayList<>();
+            for (Integer p : processCombination) {
+                Formula locP = threeValuedModelChecker.encodeLocation(p, loc, k, numberOfLocs);
+                conjunction.add(locP);
+            }
+            formulas.add(neg(and(conjunction)));
+        }
+
+        return and(formulas);
+    }
+
+    private static void combinations(int[] arr, int len, int startPosition, Integer[] result, ArrayList<Integer[]> out) {
+        if (len == 0) {
+            Integer[] tmp = new Integer[result.length];
+            System.arraycopy(result, 0, tmp, 0, tmp.length);
+            out.add(tmp);
+            return;
+        }
+        for (int i = startPosition; i <= arr.length - len; i++) {
+            result[result.length - len] = arr[i];
+            combinations(arr, len - 1, i + 1, result, out);
+        }
     }
 
     private Formula unsafeAllAtLoc(int k, int loc, int numberOfLocs, int processes) {
