@@ -8,8 +8,6 @@ import org.sat4j.minisat.core.Constr;
 import org.sat4j.minisat.core.DataStructureFactory;
 import org.sat4j.minisat.core.Solver;
 import org.sat4j.specs.IVec;
-import org.sat4j.specs.IVecInt;
-import org.sat4j.specs.IteratorInt;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -23,7 +21,7 @@ public class UnboundedMain {
     public static void main(String[] args) throws IOException {
 //        iterateLocations();
         final long startTime = System.nanoTime();
-        boolean result = start(300, 2, 3);
+        boolean result = start(300, 2, 2);
         System.out.println("result = " + result);
         final double duration = (System.nanoTime() - startTime) / 1e9;
         System.out.println("duration = " + duration);
@@ -68,11 +66,13 @@ public class UnboundedMain {
         Solver<DataStructureFactory> stepSolverM = SolverFactory.newMiniLearningHeap();
         boolean shouldResetStep = true;
         boolean shouldResetBase = true;
-        final boolean printTrueVars = true;
+        final boolean printTrueVars = false;
+        final boolean printStats = true;
+        final boolean printLearnedConstraints = false;
         final boolean printSatTimes = true;
         final boolean kSharing = true;
-        final boolean plusMinSharing = false;
-        final boolean refinementSharing = false;
+        final boolean plusMinSharing = true;
+        final boolean refinementSharing = true;
         final boolean stepWithInit = true;
 
 
@@ -167,14 +167,39 @@ public class UnboundedMain {
                 if (printSatTimes)
                     System.out.println("satDuration = " + satDuration / 1e9);
 
+                if (printStats) {
+                    System.out.println("baseSolverP:");
+                    printStats(baseSolverP);
+                }
+                if (printLearnedConstraints) {
+                    System.out.println("baseSolverP:");
+                    printLearnedConstraints(baseSolverP);
+                }
                 satStartTime = System.nanoTime();
                 if (!bUnknown) {
                     bNotUnknown = false;
                 } else {
-                    if (plusMinSharing)
+                    if (plusMinSharing) {
                         bNotUnknown = modelChecker.checkSatisfiability(baseSolverP, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
-                    else
+                        if (printStats) {
+                            System.out.println("baseSolverP:");
+                            printStats(baseSolverP);
+                        }
+                        if (printLearnedConstraints) {
+                            System.out.println("baseSolverP:");
+                            printLearnedConstraints(baseSolverP);
+                        }
+                    } else {
                         bNotUnknown = modelChecker.checkSatisfiability(baseSolverM, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
+                        if (printStats) {
+                            System.out.println("baseSolverM:");
+                            printStats(baseSolverM);
+                        }
+                        if (printLearnedConstraints) {
+                            System.out.println("baseSolverM:");
+                            printLearnedConstraints(baseSolverM);
+                        }
+                    }
                 }
                 satDuration = System.nanoTime() - satStartTime;
                 if (printSatTimes)
@@ -267,19 +292,45 @@ public class UnboundedMain {
                     final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k + 1).number;
 
                     long satStartTime = System.nanoTime();
-                    if (plusMinSharing)
+                    if (plusMinSharing) {
                         sNotUnknown = modelChecker.checkSatisfiability(stepSolverP, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
-                    else
+                        if (printStats) {
+                            System.out.println("stepSolverP:");
+                            printStats(stepSolverP);
+                        }
+                        if (printLearnedConstraints) {
+                            System.out.println("stepSolverP:");
+                            printLearnedConstraints(stepSolverP);
+                        }
+                    } else {
                         sNotUnknown = modelChecker.checkSatisfiability(stepSolverM, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
+                        if (printStats) {
+                            System.out.println("stepSolverM:");
+                            printStats(stepSolverM);
+                        }
+                        if (printLearnedConstraints) {
+                            System.out.println("stepSolverM:");
+                            printLearnedConstraints(stepSolverM);
+                        }
+                    }
                     long satDuration = System.nanoTime() - satStartTime;
                     if (printSatTimes)
                         System.out.println("satDuration = " + satDuration / 1e9);
 
                     satStartTime = System.nanoTime();
-                    if (sNotUnknown)
+                    if (sNotUnknown) {
                         sUnknown = true;
-                    else
+                    } else {
                         sUnknown = modelChecker.checkSatisfiability(stepSolverP, new VecInt(new int[]{3, -zVarNum}), printTrueVars);
+                        if (printStats) {
+                            System.out.println("stepSolverP:");
+                            printStats(stepSolverP);
+                        }
+                        if (printLearnedConstraints) {
+                            System.out.println("stepSolverP:");
+                            printLearnedConstraints(stepSolverP);
+                        }
+                    }
                     satDuration = System.nanoTime() - satStartTime;
                     if (printSatTimes)
                         System.out.println("satDuration = " + satDuration / 1e9);
@@ -321,22 +372,21 @@ public class UnboundedMain {
         out.flush();
         System.out.println();
 
+        Map stat = solver.getStat();
+
+        stat.forEach((o, o2) -> System.out.println(o + " --- " + o2));
+        System.out.println();
+    }
+
+    private static void printLearnedConstraints(Solver solver) {
+        System.out.println("Learned constraints:");
         IVec learnedConstraints = solver.getLearnedConstraints();
         Iterator iterator = learnedConstraints.iterator();
         while (iterator.hasNext()) {
             Object next = iterator.next();
-            System.out.println("Learned constraint: " + next);
+            System.out.println(next);
         }
-
-        IVecInt outLearnt = solver.getOutLearnt();
-        IteratorInt outLearntIterator = outLearnt.iterator();
-        while (outLearntIterator.hasNext()) {
-            System.out.println("solver.getOutLearnt() : " + outLearntIterator.next());
-        }
-
-        Map stat = solver.getStat();
-
-        stat.forEach((o, o2) -> System.out.println(o + " --- " + o2));
+        System.out.println();
     }
 
     private static void printUsage() {
