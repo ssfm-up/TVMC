@@ -21,7 +21,7 @@ public class UnboundedMain {
     public static void main(String[] args) throws IOException {
 //        iterateLocations();
         final long startTime = System.nanoTime();
-        boolean result = start(300, 2, 2);
+        boolean result = start(300, 2, 3);
         System.out.println("result = " + result);
         final double duration = (System.nanoTime() - startTime) / 1e9;
         System.out.println("duration = " + duration);
@@ -67,13 +67,16 @@ public class UnboundedMain {
         boolean shouldResetStep = true;
         boolean shouldResetBase = true;
         final boolean printTrueVars = false;
-        final boolean printStats = true;
+        final boolean printStats = false;
         final boolean printLearnedConstraints = false;
-        final boolean printSatTimes = true;
+        final boolean printSatTimes = false;
         final boolean kSharing = true;
         final boolean plusMinSharing = true;
         final boolean refinementSharing = true;
         final boolean stepWithInit = true;
+
+        // Constraints more than this number will not be learned
+        final int maxLengthForRefinementConstraint = 30;
 
 
         UnboundedModelChecker modelChecker = new UnboundedModelChecker(0);
@@ -122,15 +125,15 @@ public class UnboundedMain {
 
                     if (plusMinSharing) {
                         if (refinementSharing) {
-                            baseSolverP = addLearntClauses(baseSolverP);
+                            baseSolverP = addLearntClauses(baseSolverP, maxLengthForRefinementConstraint);
                         } else {
                             baseSolverP = SolverFactory.newMiniLearningHeap();
                         }
                         CNF.addClauses(baseSolverP, baseCase);
                     } else {
                         if (refinementSharing) {
-                            baseSolverP = addLearntClauses(baseSolverP);
-                            baseSolverM = addLearntClauses(baseSolverM);
+                            baseSolverP = addLearntClauses(baseSolverP, maxLengthForRefinementConstraint);
+                            baseSolverM = addLearntClauses(baseSolverM, maxLengthForRefinementConstraint);
                         } else {
                             baseSolverP = SolverFactory.newMiniLearningHeap();
                             baseSolverM = SolverFactory.newMiniLearningHeap();
@@ -253,15 +256,15 @@ public class UnboundedMain {
 
                         if (plusMinSharing) {
                             if (refinementSharing) {
-                                stepSolverP = addLearntClauses(stepSolverP);
+                                stepSolverP = addLearntClauses(stepSolverP, maxLengthForRefinementConstraint);
                             } else {
                                 stepSolverP = SolverFactory.newMiniLearningHeap();
                             }
                             CNF.addClauses(stepSolverP, step);
                         } else {
                             if (refinementSharing) {
-                                stepSolverP = addLearntClauses(stepSolverP);
-                                stepSolverM = addLearntClauses(stepSolverM);
+                                stepSolverP = addLearntClauses(stepSolverP, maxLengthForRefinementConstraint);
+                                stepSolverM = addLearntClauses(stepSolverM, maxLengthForRefinementConstraint);
                             } else {
                                 stepSolverP = SolverFactory.newMiniLearningHeap();
                                 stepSolverM = SolverFactory.newMiniLearningHeap();
@@ -354,14 +357,15 @@ public class UnboundedMain {
         return false;
     }
 
-    private static Solver<DataStructureFactory> addLearntClauses(Solver<DataStructureFactory> solver) {
+    private static Solver<DataStructureFactory> addLearntClauses(Solver<DataStructureFactory> solver, int maxLength) {
         Solver<DataStructureFactory> solver2 = SolverFactory.newMiniLearningHeap();
         IVec<Constr> learnedConstraints = solver.getLearnedConstraints();
         Iterator<Constr> iterator = learnedConstraints.iterator();
 
         while (iterator.hasNext()) {
             Constr next = iterator.next();
-            solver2.learn(next);
+            if (next.size() <= maxLength)
+                solver2.learn(next);
         }
         return solver2;
     }
