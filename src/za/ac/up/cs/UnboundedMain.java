@@ -17,6 +17,14 @@ import java.util.List;
 import java.util.Map;
 
 public class UnboundedMain {
+    // These track the number of shared constraints used for the respective cases
+    static List<Integer> sharedBaseBound = new ArrayList<>();
+    static List<Integer> sharedBaseRefine = new ArrayList<>();
+    static List<Integer> sharedBasePlusToMinus = new ArrayList<>();
+
+    static List<Integer> sharedStepBound = new ArrayList<>();
+    static List<Integer> sharedStepRefine = new ArrayList<>();
+    static List<Integer> sharedStepMinusToPlus = new ArrayList<>();
 
     public static void main(String[] args) throws IOException {
 //        iterateLocations();
@@ -25,6 +33,13 @@ public class UnboundedMain {
         System.out.println("result = " + result);
         final double duration = (System.nanoTime() - startTime) / 1e9;
         System.out.println("duration = " + duration);
+
+        System.out.println("sharedBaseBound = " + sharedBaseBound);
+        System.out.println("sharedBaseRefine = " + sharedBaseRefine);
+        System.out.println("sharedBasePlusToMinus = " + sharedBasePlusToMinus);
+        System.out.println("sharedStepBound = " + sharedStepBound);
+        System.out.println("sharedStepRefine = " + sharedStepRefine);
+        System.out.println("sharedStepMinusToPlus = " + sharedStepMinusToPlus);
     }
 
     private static void iterateLocations() throws IOException {
@@ -56,9 +71,25 @@ public class UnboundedMain {
      * @throws IOException
      */
     static boolean start(int maxBound, int loc, int processes) throws IOException {
+        final String basePath = "examples/" + processes + "philosophers/" + processes + "Phil";
+
+        final boolean printTrueVars = false;
+        final boolean printStats = false;
+        final boolean printLearnedConstraints = false;
+        final boolean printSatTimes = false;
+        // Whether to calculate the use of shared constraints
+        final boolean trackSharing = true;
+        final boolean kSharing = true;
+        final boolean plusMinSharing = true;
+        final boolean refinementSharing = true;
+        final boolean stepWithInit = true;
+
+        // Constraints more than this number will not be learned
+        final int maxLengthForRefinementConstraint = 40000;
+
+
         int predBase = 0;
         int predStep = 0;
-        final String basePath = "examples/" + processes + "philosophers/" + processes + "Phil";
 
         Solver<DataStructureFactory> baseSolverP = SolverFactory.newMiniLearningHeap();
         Solver<DataStructureFactory> baseSolverM = SolverFactory.newMiniLearningHeap();
@@ -66,18 +97,6 @@ public class UnboundedMain {
         Solver<DataStructureFactory> stepSolverM = SolverFactory.newMiniLearningHeap();
         boolean shouldResetStep = true;
         boolean shouldResetBase = true;
-        final boolean printTrueVars = false;
-        final boolean printStats = false;
-        final boolean printLearnedConstraints = false;
-        final boolean printSatTimes = false;
-        final boolean kSharing = true;
-        final boolean plusMinSharing = true;
-        final boolean refinementSharing = true;
-        final boolean stepWithInit = true;
-
-        // Constraints more than this number will not be learned
-        final int maxLengthForRefinementConstraint = 30;
-
 
         UnboundedModelChecker modelChecker = new UnboundedModelChecker(0);
         final SafeLocEncodingFunction safeAllAtLocFunction = modelChecker::safeAnyPairAtLoc;
@@ -142,6 +161,8 @@ public class UnboundedMain {
                         CNF.addClauses(baseSolverP, baseCase);
                         CNF.addClauses(baseSolverM, baseCase);
                     }
+                    if (trackSharing)
+                        sharedBaseRefine.add(baseSolverM.getLearnedConstraints().size() + baseSolverP.getLearnedConstraints().size());
                 } else {
                     // !baseRequiresRefinement && !shouldResetBase
                     // Next k case and predicate refinement did not happen, so just add onto existing formula
@@ -160,6 +181,8 @@ public class UnboundedMain {
                         CNF.addClauses(baseSolverP, addition);
                         CNF.addClauses(baseSolverM, addition);
                     }
+                    if (trackSharing)
+                        sharedBaseBound.add(baseSolverP.getLearnedConstraints().size() + baseSolverM.getLearnedConstraints().size());
                 }
 
                 final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k).number;
@@ -183,6 +206,9 @@ public class UnboundedMain {
                     bNotUnknown = false;
                 } else {
                     if (plusMinSharing) {
+                        if (trackSharing)
+                            sharedBasePlusToMinus.add(baseSolverP.getLearnedConstraints().size());
+
                         bNotUnknown = modelChecker.checkSatisfiability(baseSolverP, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
                         if (printStats) {
                             System.out.println("baseSolverP:");
@@ -273,6 +299,8 @@ public class UnboundedMain {
                             CNF.addClauses(stepSolverP, step);
                             CNF.addClauses(stepSolverM, step);
                         }
+                        if (trackSharing)
+                            sharedStepRefine.add(stepSolverM.getLearnedConstraints().size() + stepSolverP.getLearnedConstraints().size());
                     } else {
                         // !stepRequiresRefinement && !shouldResetStep
                         final Formula ltlAddition = modelChecker.generateAdditiveSafetyEncoding(k + 1, loc, processes, stateCount, safeAllAtLocFunction);
@@ -290,6 +318,8 @@ public class UnboundedMain {
                             CNF.addClauses(stepSolverP, addition);
                             CNF.addClauses(stepSolverM, addition);
                         }
+                        if (trackSharing)
+                            sharedStepBound.add(stepSolverP.getLearnedConstraints().size() + stepSolverM.getLearnedConstraints().size());
                     }
 
                     final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k + 1).number;
@@ -324,6 +354,9 @@ public class UnboundedMain {
                     if (sNotUnknown) {
                         sUnknown = true;
                     } else {
+                        if (trackSharing && plusMinSharing)
+                            sharedStepMinusToPlus.add(stepSolverP.getLearnedConstraints().size());
+
                         sUnknown = modelChecker.checkSatisfiability(stepSolverP, new VecInt(new int[]{3, -zVarNum}), printTrueVars);
                         if (printStats) {
                             System.out.println("stepSolverP:");
