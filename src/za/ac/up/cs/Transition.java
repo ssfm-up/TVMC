@@ -35,6 +35,8 @@ public class Transition {
         return destination;
     }
 
+    String getGuard(){ return guard ;}
+
     Formula getGuardEncoding(ThreeValuedModelChecker mc, LogicParser parser, int process) {
         String s = guard;
         if (s.equals("choice(false, false)"))

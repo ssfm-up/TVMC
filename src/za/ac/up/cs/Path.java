@@ -53,7 +53,15 @@ public class Path {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
+        int i = 0;
+        Step followup[] = new Step[2];
         for (Step step : steps) {
+            followup[1] = step;
+            if (i > 0) {
+                printGuard(sb, followup);
+                sb.append("\n");
+            }
+            followup[0] = followup[1];
             sb.append(step);
             int proc = getProgressAtBound(step.getBound());
             if (proc != -1) {
@@ -61,7 +69,44 @@ public class Path {
                 sb.append(proc);
                 sb.append(" --->\n");
             }
+            i++;
         }
         return sb.toString();
+    }
+
+    private void printGuard(StringBuilder sb, Step[] followup) {
+        int numProcesses = cfgs.getNumberOfProcesses();
+        String stepString = followup[0].toString();
+        Character states[] = new Character[numProcesses];
+        for (int x = 0; x < numProcesses; x++) {
+            int pos = stepString.indexOf(',');
+            states[x] = stepString.charAt(pos - 1);
+            stepString = stepString.substring(pos + 1);
+        }
+        stepString = followup[1].toString();
+        int processChanged = -1;
+        int destination = -1;
+        int source = -1;
+        for (int x = 0; x < numProcesses; x++) {
+            int pos = stepString.indexOf(',');
+            if (states[x] != stepString.charAt(pos - 1)) {
+                processChanged = x;
+                source = Character.getNumericValue(states[x]);
+                destination = Character.getNumericValue(stepString.charAt(pos - 1));
+                break;
+            }
+            stepString = stepString.substring(pos + 1);
+        }
+        int stateOfCurProcess = Character.getNumericValue(states[processChanged]);
+        List<Transition> stateTransitions = cfgs.getProcess(processChanged).getStates().get(stateOfCurProcess).getTransitions();
+
+        String guard = "";
+        for (Transition t : stateTransitions) {
+            if (t.getSource() == source && t.getDestination() == destination) {
+                guard = t.getGuard();
+            }
+        }
+        sb.append(" " + guard);
+
     }
 }
