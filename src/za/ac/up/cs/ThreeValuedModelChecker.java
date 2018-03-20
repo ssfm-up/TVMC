@@ -26,12 +26,17 @@ public class ThreeValuedModelChecker {
     final Map<String, Integer> predMap = new HashMap<>();
     final Map<Var, Integer> predUnknownMap = new HashMap<>();
     final Map<Formula, String> guardUnknownMap = new HashMap<>();
-    private final int maxBound;
+    private int maxBound;
     CFG cfgs;
     boolean checkFairness = false;
     Var[][] progress;
     private Properties config;
     TseitinVisitor tseitinVisitor;
+
+    public ThreeValuedModelChecker(int maxBound) {
+        this.maxBound = maxBound;
+        this.tseitinVisitor = new TseitinVisitor();
+    }
 
     public ThreeValuedModelChecker(CFG cfgs, int maxBound, Properties config) {
         this.cfgs = cfgs;
@@ -81,6 +86,10 @@ public class ThreeValuedModelChecker {
 
     private Var locVar(int process, int loc, int bound) {
         return getNamedVar("l_" + process + "_" + loc + "_" + bound);
+    }
+
+    Var zVar(int bound) {
+        return getNamedVar("z_" + bound);
     }
 
     /**
@@ -213,11 +222,51 @@ public class ThreeValuedModelChecker {
         return and(init, transitionEncoding, ltlPropertyEncoding, TRUE, neg(FALSE));
     }
 
-    Formula constructStepFormula(Formula ltlPropertyEncoding, int numProcesses, int numLocs) {
-        Formula transitionEncoding = encodeTransitions(cfgs, maxBound);
+    Formula constructAdditiveBaseCase(int maxBound) {
+        return encodeTransitions(cfgs, maxBound - 1, maxBound);
+    }
 
+    Formula constructAdditiveStepCase(int maxBound, int numProcesses, int numOfLocs) {
+        ArrayList<Formula> conjunctionFormulas = new ArrayList<>();
+
+        for (int r = 0; r <= maxBound - 1; r++) {
+            ArrayList<Formula> formulas = new ArrayList<>();
+
+            for (int i = 0; i < numProcesses; i++) {
+                for (int j = 0; j < numOfLocs; j++) {
+                    Formula locR = encodeLocation(i, j, r, numOfLocs);
+                    Formula locR2 = encodeLocation(i, j, maxBound, numOfLocs);
+                    Formula term1 = and(locR, neg(locR2));
+                    Formula term2 = and(neg(locR), locR2);
+                    formulas.add(or(term1, term2));
+                }
+            }
+            conjunctionFormulas.add(or(formulas));
+        }
+
+        return and(encodeTransitions(cfgs, maxBound - 1, maxBound), and(conjunctionFormulas));
+    }
+
+    Formula constructStepFormula(Formula ltlPropertyEncoding, int numProcesses, int numLocs, boolean stepWithInit) {
+        Formula transitionEncoding = encodeTransitions(cfgs, maxBound);
         Formula loopFreeK = loopFree(maxBound, numProcesses, numLocs);
-        return and(transitionEncoding, ltlPropertyEncoding, loopFreeK, TRUE, neg(FALSE));
+
+        Formula formula;
+
+        if (stepWithInit) {
+            // Add encoding for initial state so that no predicates are unknown
+            List<Formula> formulas = new ArrayList<>();
+            for (int p = 0; p < cfgs.getNumberOfPredicates(); p++) {
+                final Formula pKnown = neg(var(predVar(p, 0, false)));
+                formulas.add(pKnown);
+            }
+            final Formula init = and(formulas);
+            formula = and(init, transitionEncoding, ltlPropertyEncoding, loopFreeK, TRUE, neg(FALSE));
+        } else {
+            formula = and(transitionEncoding, ltlPropertyEncoding, loopFreeK, TRUE, neg(FALSE));
+        }
+
+        return formula;
     }
 
     Formula loopFree(int k, int numProcesses, int numOfLocs) {
@@ -278,25 +327,7 @@ public class ThreeValuedModelChecker {
             Set<Var> trueVars = CNF.satisfiable(cnfFormula, solver, constraints, tseitinVisitor, x);
             if (trueVars != null) {
                 System.out.println("SATISFIABLE");
-                System.out.println("True Variables:");
-                Path executionPath = new Path(cfgs, maxBound);
-                for (String key : new TreeSet<>(vars.keySet())) {
-                    if (trueVars.contains(vars.get(key))) {
-                        if (key.startsWith("p_")) {
-                            executionPath.addPredicate(key);
-                        } else if (key.startsWith("l_")) {
-                            executionPath.addLocation(key);
-                        } else if (key.startsWith("u_")) {
-                            // TODO: Add unknown to list for use in refinement
-                        } else {
-                            executionPath.addProgressStep(key);
-                        }
-                        System.out.println(key);
-                    }
-                }
-                // TODO: Use list of true unknowns here for refinement
-                System.out.println();
-                System.out.println(executionPath);
+                printTrueVars(trueVars);
                 return true;
             } else {
                 System.out.println("NOT SATISFIABLE");
@@ -307,6 +338,55 @@ public class ThreeValuedModelChecker {
             e.printStackTrace();
         }
         return false;
+    }
+
+    boolean checkSatisfiability(ISolver solver, IVecInt constraints, boolean printTrueVars) {
+        try {
+            if (solver.isSatisfiable(constraints)) {
+                int[] model = solver.model();
+                Set<Var> trueVars = new HashSet<>();
+                for (Integer y : model) {
+                    if (y > 0) {
+                        trueVars.add(new Var(y));
+                    }
+                }
+
+                System.out.println("SATISFIABLE");
+                if (printTrueVars) printTrueVars(trueVars);
+                return true;
+            } else {
+                System.out.println("NOT SATISFIABLE");
+                return false;
+            }
+        } catch (TimeoutException e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    private void printTrueVars(Set<Var> trueVars) {
+        System.out.println("True Variables:");
+        Path executionPath = new Path(cfgs, maxBound);
+        for (String key : new TreeSet<>(vars.keySet())) {
+            if (trueVars.contains(vars.get(key))) {
+                if (key.startsWith("p_")) {
+                    executionPath.addPredicate(key);
+                } else if (key.startsWith("l_")) {
+                    executionPath.addLocation(key);
+                } else if (key.startsWith("u_")) {
+                    // TODO: Add unknown to list for use in refinement
+                } else if (key.startsWith("z_")) {
+
+                } else {
+                    executionPath.addProgressStep(key);
+                }
+                System.out.println(key);
+            }
+        }
+        // TODO: Use list of true unknowns here for refinement
+        System.out.println();
+        System.out.println(executionPath);
     }
 
     /**
@@ -324,6 +404,20 @@ public class ThreeValuedModelChecker {
         System.out.println("=====================================");
     }
 
+    void printFormula(Formula formula) {
+        final String[] formulaString = {formula.toString()};
+
+        vars.forEach((s, var) -> {
+            formulaString[0] = formulaString[0].replaceAll("x" + var.number, s);
+        });
+
+        formulaString[0] = formulaString[0].replaceAll(FALSE.toString(), "FALSE");
+        formulaString[0] = formulaString[0].replaceAll(TRUE.toString(), "TRUE");
+        formulaString[0] = formulaString[0].replaceAll(UNKNOWN.toString(), "UNKNOWN");
+
+        System.out.println(formulaString[0]);
+    }
+
     /**
      * See Definition 10
      *
@@ -332,8 +426,13 @@ public class ThreeValuedModelChecker {
      * @return
      */
     private Formula encodeTransitions(CFG cfgs, int bound) {
+        return encodeTransitions(cfgs, 0, bound);
+    }
+
+    private Formula encodeTransitions(CFG cfgs, int startBound, int maxBound) {
+        if (startBound < 0) startBound = 0;
         List<Formula> formulas = new ArrayList<>();
-        for (int i = 0; i < bound; i++) {
+        for (int i = startBound; i < maxBound; i++) {
 
             List<Formula> processTransitions = new ArrayList<>();
             List<Process> processes = cfgs.getProcesses();
@@ -375,5 +474,9 @@ public class ThreeValuedModelChecker {
                 progressFlags[i][j] = getNamedVar("progress_" + i + "_" + j);
         }
         return progressFlags;
+    }
+
+    public void setMaxBound(int maxBound) {
+        this.maxBound = maxBound;
     }
 }

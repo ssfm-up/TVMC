@@ -1,5 +1,6 @@
 package za.ac.up.cs;
 
+import cnf.CNF;
 import cnf.Formula;
 import org.sat4j.core.VecInt;
 import org.sat4j.minisat.SolverFactory;
@@ -7,21 +8,38 @@ import org.sat4j.minisat.core.Constr;
 import org.sat4j.minisat.core.DataStructureFactory;
 import org.sat4j.minisat.core.Solver;
 import org.sat4j.specs.IVec;
-import org.sat4j.specs.IVecInt;
-import org.sat4j.specs.IteratorInt;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 public class UnboundedMain {
+    // These track the number of shared constraints used for the respective cases
+    static List<Integer> sharedBaseBound = new ArrayList<>();
+    static List<Integer> sharedBaseRefine = new ArrayList<>();
+    static List<Integer> sharedBasePlusToMinus = new ArrayList<>();
+
+    static List<Integer> sharedStepBound = new ArrayList<>();
+    static List<Integer> sharedStepRefine = new ArrayList<>();
+    static List<Integer> sharedStepMinusToPlus = new ArrayList<>();
 
     public static void main(String[] args) throws IOException {
 //        iterateLocations();
         final long startTime = System.nanoTime();
-        boolean result = start(300, 2, 4);
+        boolean result = start(300, 2, 3);
+        System.out.println("result = " + result);
         final double duration = (System.nanoTime() - startTime) / 1e9;
         System.out.println("duration = " + duration);
+
+        System.out.println("sharedBaseBound = " + sharedBaseBound);
+        System.out.println("sharedBaseRefine = " + sharedBaseRefine);
+        System.out.println("sharedBasePlusToMinus = " + sharedBasePlusToMinus);
+        System.out.println("sharedStepBound = " + sharedStepBound);
+        System.out.println("sharedStepRefine = " + sharedStepRefine);
+        System.out.println("sharedStepMinusToPlus = " + sharedStepMinusToPlus);
     }
 
     private static void iterateLocations() throws IOException {
@@ -53,79 +71,316 @@ public class UnboundedMain {
      * @throws IOException
      */
     static boolean start(int maxBound, int loc, int processes) throws IOException {
-        int predBase = 0;
-        int predStep = 0;
         final String basePath = "examples/" + processes + "philosophers/" + processes + "Phil";
 
-        Properties config = Helpers.loadConfigurationFile();
+        final boolean printTrueVars = false;
+        final boolean printStats = false;
+        final boolean printLearnedConstraints = false;
+        final boolean printSatTimes = false;
+        // Whether to calculate the use of shared constraints
+        final boolean trackSharing = true;
+        final boolean kSharing = true;
+        final boolean plusMinSharing = true;
+        final boolean refinementSharing = true;
+        final boolean stepWithInit = true;
+
+        // Constraints more than this number will not be learned
+        final int maxLengthForRefinementConstraint = 40000;
+
+
+        int predBase = 0;
+        int predStep = 0;
+
+        Solver<DataStructureFactory> baseSolverP = SolverFactory.newMiniLearningHeap();
+        Solver<DataStructureFactory> baseSolverM = SolverFactory.newMiniLearningHeap();
+        Solver<DataStructureFactory> stepSolverP = SolverFactory.newMiniLearningHeap();
+        Solver<DataStructureFactory> stepSolverM = SolverFactory.newMiniLearningHeap();
+        boolean shouldResetStep = true;
+        boolean shouldResetBase = true;
+
+        UnboundedModelChecker modelChecker = new UnboundedModelChecker(0);
+        final SafeLocEncodingFunction safeAllAtLocFunction = modelChecker::safeAnyPairAtLoc;
 
         for (int k = 0; k < maxBound; k++) {
             System.out.println("k = " + k);
+            modelChecker.setMaxBound(k);
 
-            boolean bUnknown = false;
-            boolean bNotUnknown = false;
-            boolean baseRequiresRefinement = true;
+            boolean bUnknown;
+            boolean bNotUnknown;
+            boolean baseRequiresRefinement = false;
 
             String path = basePath + predBase + "P.json";
             CFG cfg = Helpers.readCfg(path);
             final int stateCount = cfg.getProcess(0).getStateCount();
-            System.out.println("stateCount = " + stateCount);
-            UnboundedModelChecker modelChecker = new UnboundedModelChecker(cfg, k, config);
-            Solver<DataStructureFactory> solver = SolverFactory.newMiniLearningHeap();
-            Formula ltlEncoding = modelChecker.generateSafetyEncodingAllProcessesFormula(k, loc, processes, stateCount);
 
-            while (baseRequiresRefinement) {
-                solver = addLearntClauses(solver);
+            do {
                 path = basePath + predBase + "P.json";
-                System.out.println("path = " + path);
+                System.out.println("base " + predBase + "p");
                 modelChecker.setCfgs(Helpers.readCfg(path));
 
-                Formula baseCase = modelChecker.getBaseCaseFormula(ltlEncoding);
+                Formula baseCase;
+                if (!baseRequiresRefinement && shouldResetBase) {
+                    // Next k case, but predicate refinement happened so formula gets reset
+                    Formula ltlEncodingBase = modelChecker.generateSafetyEncodingFormula(k, loc, processes, stateCount, safeAllAtLocFunction);
 
-                bUnknown = modelChecker.checkSatisfiability(baseCase, solver, new VecInt(new int[]{3}));
-                bNotUnknown = modelChecker.checkSatisfiability(baseCase, solver, new VecInt(new int[]{-3}));
+                    baseCase = modelChecker.constructBaseCaseFormula(ltlEncodingBase);
 
-                // true, false ==> Unknown, so add predicate
-                if (bUnknown && !bNotUnknown) predBase += 1;
-                else baseRequiresRefinement = false;
-            }
+                    if (plusMinSharing) {
+                        baseSolverP = SolverFactory.newMiniLearningHeap();
+                        CNF.addClauses(baseSolverP, baseCase);
+                    } else {
+                        baseSolverP = SolverFactory.newMiniLearningHeap();
+                        baseSolverM = SolverFactory.newMiniLearningHeap();
+                        CNF.addClauses(baseSolverP, baseCase);
+                        CNF.addClauses(baseSolverM, baseCase);
+                    }
 
-            if (bUnknown) return true; // true, true ==> Error reachable
-            else if (bNotUnknown) { // false, true ==> invalid
-                System.out.println("Error: (bUnknown, bNotUnknown) = (false, true)");
-                System.exit(1);
-            } else {
-                // false, false ==> Proceed to induction step, k + 1
-                boolean sUnknown = false;
-                boolean sNotUnknown = false;
-                boolean stepRequiresRefinement = true;
+                    shouldResetBase = false;
+                } else if (baseRequiresRefinement) {
+                    // baseRequiresRefinement && shouldResetBase
+                    // Predicate refinement case
+                    Formula ltlEncodingBase = modelChecker.generateSafetyEncodingFormula(k, loc, processes, stateCount, safeAllAtLocFunction);
+                    baseCase = modelChecker.constructBaseCaseFormula(ltlEncodingBase);
 
-                String stepPath = basePath + predStep + "P.json";
+                    if (plusMinSharing) {
+                        if (refinementSharing) {
+                            baseSolverP = addLearntClauses(baseSolverP, maxLengthForRefinementConstraint);
+                        } else {
+                            baseSolverP = SolverFactory.newMiniLearningHeap();
+                        }
+                        CNF.addClauses(baseSolverP, baseCase);
+                    } else {
+                        if (refinementSharing) {
+                            baseSolverP = addLearntClauses(baseSolverP, maxLengthForRefinementConstraint);
+                            baseSolverM = addLearntClauses(baseSolverM, maxLengthForRefinementConstraint);
+                        } else {
+                            baseSolverP = SolverFactory.newMiniLearningHeap();
+                            baseSolverM = SolverFactory.newMiniLearningHeap();
+                        }
 
-                CFG cfgStep = Helpers.readCfg(stepPath);
-                modelChecker = new UnboundedModelChecker(cfgStep, k + 1, config);
+                        CNF.addClauses(baseSolverP, baseCase);
+                        CNF.addClauses(baseSolverM, baseCase);
+                    }
+                    if (trackSharing)
+                        sharedBaseRefine.add(baseSolverM.getLearnedConstraints().size() + baseSolverP.getLearnedConstraints().size());
+                } else {
+                    // !baseRequiresRefinement && !shouldResetBase
+                    // Next k case and predicate refinement did not happen, so just add onto existing formula
+                    final Formula ltlAddition = modelChecker.generateAdditiveSafetyEncoding(k, loc, processes, stateCount, safeAllAtLocFunction);
+                    final Formula addition = modelChecker.constructAdditiveBaseCase(k, ltlAddition);
+                    if (plusMinSharing) {
+                        if (!kSharing) baseSolverP.clearLearntClauses();
 
-                ltlEncoding = modelChecker.generateSafetyEncodingAllProcessesFormula(k + 1, loc, processes, stateCount);
+                        CNF.addClauses(baseSolverP, addition);
+                    } else {
+                        if (!kSharing) {
+                            baseSolverP.clearLearntClauses();
+                            baseSolverM.clearLearntClauses();
+                        }
 
-                solver = SolverFactory.newMiniLearningHeap();
-
-                while (stepRequiresRefinement) {
-                    solver = addLearntClauses(solver);
-
-                    stepPath = basePath + predStep + "P.json";
-                    System.out.println("stepPath = " + stepPath);
-                    modelChecker.setCfgs(Helpers.readCfg(stepPath));
-
-                    Formula step = modelChecker.getStepFormula(ltlEncoding, processes, stateCount);
-
-                    sUnknown = modelChecker.checkSatisfiability(step, solver, new VecInt(new int[]{3}));
-                    sNotUnknown = modelChecker.checkSatisfiability(step, solver, new VecInt(new int[]{-3}));
-
-                    if (sUnknown && !sNotUnknown) predStep += 1;
-                    else stepRequiresRefinement = false;
+                        CNF.addClauses(baseSolverP, addition);
+                        CNF.addClauses(baseSolverM, addition);
+                    }
+                    if (trackSharing)
+                        sharedBaseBound.add(baseSolverP.getLearnedConstraints().size() + baseSolverM.getLearnedConstraints().size());
                 }
 
-                if (!sUnknown && !sNotUnknown) return false;
+                final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k).number;
+
+                long satStartTime = System.nanoTime();
+                bUnknown = modelChecker.checkSatisfiability(baseSolverP, new VecInt(new int[]{3, -zVarNum}), printTrueVars);
+                long satDuration = System.nanoTime() - satStartTime;
+                if (printSatTimes)
+                    System.out.println("satDuration = " + satDuration / 1e9);
+
+                if (printStats) {
+                    System.out.println("baseSolverP:");
+                    printStats(baseSolverP);
+                }
+                if (printLearnedConstraints) {
+                    System.out.println("baseSolverP:");
+                    printLearnedConstraints(baseSolverP);
+                }
+                satStartTime = System.nanoTime();
+                if (!bUnknown) {
+                    bNotUnknown = false;
+                } else {
+                    if (plusMinSharing) {
+                        if (trackSharing)
+                            sharedBasePlusToMinus.add(baseSolverP.getLearnedConstraints().size());
+
+                        bNotUnknown = modelChecker.checkSatisfiability(baseSolverP, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
+                        if (printStats) {
+                            System.out.println("baseSolverP:");
+                            printStats(baseSolverP);
+                        }
+                        if (printLearnedConstraints) {
+                            System.out.println("baseSolverP:");
+                            printLearnedConstraints(baseSolverP);
+                        }
+                    } else {
+                        bNotUnknown = modelChecker.checkSatisfiability(baseSolverM, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
+                        if (printStats) {
+                            System.out.println("baseSolverM:");
+                            printStats(baseSolverM);
+                        }
+                        if (printLearnedConstraints) {
+                            System.out.println("baseSolverM:");
+                            printLearnedConstraints(baseSolverM);
+                        }
+                    }
+                }
+                satDuration = System.nanoTime() - satStartTime;
+                if (printSatTimes)
+                    System.out.println("satDuration = " + satDuration / 1e9);
+
+                // true, false ==> Unknown, so add predicate
+                if (bUnknown && !bNotUnknown) {
+                    predBase += 1;
+                    baseRequiresRefinement = true;
+                    shouldResetBase = true;
+                } else {
+                    baseRequiresRefinement = false;
+                }
+            } while (baseRequiresRefinement);
+
+            if (bUnknown) return true; // true, true ==> Error reachable
+            else {
+                // false, false ==> Proceed to induction step, k + 1
+                boolean sUnknown;
+                boolean sNotUnknown;
+                boolean stepRequiresRefinement = false;
+
+                do {
+                    String stepPath = basePath + predStep + "P.json";
+                    System.out.println();
+                    System.out.println("step k=" + (k + 1) + " " + predStep + "p");
+                    modelChecker.setCfgs(Helpers.readCfg(stepPath));
+                    modelChecker.setMaxBound(k + 1);
+
+
+                    Formula step;
+                    if (!stepRequiresRefinement && shouldResetStep) {
+                        Formula ltlEncoding = modelChecker.generateSafetyEncodingFormula(k + 1, loc, processes, stateCount, safeAllAtLocFunction);
+                        step = modelChecker.getStepFormula(ltlEncoding, processes, stateCount, stepWithInit);
+
+                        if (plusMinSharing) {
+                            stepSolverP = SolverFactory.newMiniLearningHeap();
+                            CNF.addClauses(stepSolverP, step);
+                        } else {
+                            stepSolverP = SolverFactory.newMiniLearningHeap();
+                            stepSolverM = SolverFactory.newMiniLearningHeap();
+                            CNF.addClauses(stepSolverP, step);
+                            CNF.addClauses(stepSolverM, step);
+                        }
+
+                        shouldResetStep = false;
+                    } else if (stepRequiresRefinement) {
+                        //stepRequiresRefinement && shouldResetStep
+                        Formula ltlEncoding = modelChecker.generateSafetyEncodingFormula(k + 1, loc, processes, stateCount, safeAllAtLocFunction);
+                        step = modelChecker.getStepFormula(ltlEncoding, processes, stateCount, stepWithInit);
+
+                        if (plusMinSharing) {
+                            if (refinementSharing) {
+                                stepSolverP = addLearntClauses(stepSolverP, maxLengthForRefinementConstraint);
+                            } else {
+                                stepSolverP = SolverFactory.newMiniLearningHeap();
+                            }
+                            CNF.addClauses(stepSolverP, step);
+                        } else {
+                            if (refinementSharing) {
+                                stepSolverP = addLearntClauses(stepSolverP, maxLengthForRefinementConstraint);
+                                stepSolverM = addLearntClauses(stepSolverM, maxLengthForRefinementConstraint);
+                            } else {
+                                stepSolverP = SolverFactory.newMiniLearningHeap();
+                                stepSolverM = SolverFactory.newMiniLearningHeap();
+                            }
+
+                            CNF.addClauses(stepSolverP, step);
+                            CNF.addClauses(stepSolverM, step);
+                        }
+                        if (trackSharing)
+                            sharedStepRefine.add(stepSolverM.getLearnedConstraints().size() + stepSolverP.getLearnedConstraints().size());
+                    } else {
+                        // !stepRequiresRefinement && !shouldResetStep
+                        final Formula ltlAddition = modelChecker.generateAdditiveSafetyEncoding(k + 1, loc, processes, stateCount, safeAllAtLocFunction);
+                        final Formula addition = modelChecker.constructAdditiveStepCase(k + 1, ltlAddition, processes, stateCount);
+                        if (plusMinSharing) {
+                            if (!kSharing) stepSolverP.clearLearntClauses();
+
+                            CNF.addClauses(stepSolverP, addition);
+                        } else {
+                            if (!kSharing) {
+                                stepSolverP.clearLearntClauses();
+                                stepSolverM.clearLearntClauses();
+                            }
+
+                            CNF.addClauses(stepSolverP, addition);
+                            CNF.addClauses(stepSolverM, addition);
+                        }
+                        if (trackSharing)
+                            sharedStepBound.add(stepSolverP.getLearnedConstraints().size() + stepSolverM.getLearnedConstraints().size());
+                    }
+
+                    final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k + 1).number;
+
+                    long satStartTime = System.nanoTime();
+                    if (plusMinSharing) {
+                        sNotUnknown = modelChecker.checkSatisfiability(stepSolverP, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
+                        if (printStats) {
+                            System.out.println("stepSolverP:");
+                            printStats(stepSolverP);
+                        }
+                        if (printLearnedConstraints) {
+                            System.out.println("stepSolverP:");
+                            printLearnedConstraints(stepSolverP);
+                        }
+                    } else {
+                        sNotUnknown = modelChecker.checkSatisfiability(stepSolverM, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
+                        if (printStats) {
+                            System.out.println("stepSolverM:");
+                            printStats(stepSolverM);
+                        }
+                        if (printLearnedConstraints) {
+                            System.out.println("stepSolverM:");
+                            printLearnedConstraints(stepSolverM);
+                        }
+                    }
+                    long satDuration = System.nanoTime() - satStartTime;
+                    if (printSatTimes)
+                        System.out.println("satDuration = " + satDuration / 1e9);
+
+                    satStartTime = System.nanoTime();
+                    if (sNotUnknown) {
+                        sUnknown = true;
+                    } else {
+                        if (trackSharing && plusMinSharing)
+                            sharedStepMinusToPlus.add(stepSolverP.getLearnedConstraints().size());
+
+                        sUnknown = modelChecker.checkSatisfiability(stepSolverP, new VecInt(new int[]{3, -zVarNum}), printTrueVars);
+                        if (printStats) {
+                            System.out.println("stepSolverP:");
+                            printStats(stepSolverP);
+                        }
+                        if (printLearnedConstraints) {
+                            System.out.println("stepSolverP:");
+                            printLearnedConstraints(stepSolverP);
+                        }
+                    }
+                    satDuration = System.nanoTime() - satStartTime;
+                    if (printSatTimes)
+                        System.out.println("satDuration = " + satDuration / 1e9);
+
+                    if (sUnknown && !sNotUnknown) {
+                        predStep += 1;
+                        shouldResetStep = true;
+                        stepRequiresRefinement = true;
+                    } else {
+                        stepRequiresRefinement = false;
+                    }
+                } while (stepRequiresRefinement);
+
+                if (!sUnknown) return false;
 
             }
         }
@@ -135,57 +390,17 @@ public class UnboundedMain {
         return false;
     }
 
-    private static Solver<DataStructureFactory> addLearntClauses(Solver<DataStructureFactory> solver) {
+    private static Solver<DataStructureFactory> addLearntClauses(Solver<DataStructureFactory> solver, int maxLength) {
         Solver<DataStructureFactory> solver2 = SolverFactory.newMiniLearningHeap();
         IVec<Constr> learnedConstraints = solver.getLearnedConstraints();
         Iterator<Constr> iterator = learnedConstraints.iterator();
 
         while (iterator.hasNext()) {
             Constr next = iterator.next();
-            solver2.learn(next);
+            if (next.size() <= maxLength)
+                solver2.learn(next);
         }
         return solver2;
-    }
-
-    private static void checkSafety(int maxBound, UnboundedModelChecker modelChecker, Solver solver, int loc, int processes, int numberOfLocs) {
-        // Safety encoding
-        Formula ltlEncoding = modelChecker.generateSafetyEncodingFormula(maxBound, loc, processes, numberOfLocs);
-        System.out.println("ltlEncoding = " + ltlEncoding);
-
-
-        Formula baseCase = modelChecker.getBaseCaseFormula(ltlEncoding);
-//        System.out.println("baseCase = " + baseCase);
-        System.out.println();
-
-        System.out.println("==== UNKNOWN FORMULA ====");
-        ArrayList<Integer> unknownAssumptionList = new ArrayList<>();
-        unknownAssumptionList.add(3);
-        int[] unknownAssumptions = unknownAssumptionList.stream().mapToInt(x -> x).toArray();
-        boolean bUnknown = modelChecker.checkSatisfiability(baseCase, solver, new VecInt(unknownAssumptions));
-//        modelChecker.printVars();
-        System.out.println("Is satisfiable? = " + bUnknown);
-
-//        printStats(solver);
-
-        System.out.println();
-        System.out.println("==== NOT UNKNOWN FORMULA ====");
-        ArrayList<Integer> notUnknownAssumptionList = new ArrayList<>();
-        notUnknownAssumptionList.add(-3);
-        int[] notUnknownAssumptions = notUnknownAssumptionList.stream().mapToInt(x -> x).toArray();
-
-        boolean bNotUnknown = modelChecker.checkSatisfiability(baseCase, solver, new VecInt(notUnknownAssumptions));
-//        modelChecker.printVars();
-        System.out.println("Is satisfiable? = " + bNotUnknown);
-
-//        printStats(solver);
-
-        System.out.println();
-
-        System.out.println("Unknown formula satisfiable: " + bUnknown);
-        System.out.println("Not unknown formula satisfiable: " + bNotUnknown);
-
-        Formula step = modelChecker.getStepFormula(ltlEncoding, processes, numberOfLocs);
-//        System.out.println("step = " + step);
     }
 
     private static void printStats(Solver solver) {
@@ -194,23 +409,21 @@ public class UnboundedMain {
         out.flush();
         System.out.println();
 
-        IVec learnedConstraints = solver.getLearnedConstraints();
-//                IteratorInt iterator = outLearnt.iterator();
-        Iterator iterator = learnedConstraints.iterator();
-        while (iterator.hasNext()) {
-            Object next = iterator.next();
-            System.out.println("Learned constraint: " + next);
-        }
-
-        IVecInt outLearnt = solver.getOutLearnt();
-        IteratorInt outLearntIterator = outLearnt.iterator();
-        while (outLearntIterator.hasNext()) {
-            System.out.println("solver.getOutLearnt() : " + outLearntIterator.next());
-        }
-
         Map stat = solver.getStat();
 
         stat.forEach((o, o2) -> System.out.println(o + " --- " + o2));
+        System.out.println();
+    }
+
+    private static void printLearnedConstraints(Solver solver) {
+        System.out.println("Learned constraints:");
+        IVec learnedConstraints = solver.getLearnedConstraints();
+        Iterator iterator = learnedConstraints.iterator();
+        while (iterator.hasNext()) {
+            Object next = iterator.next();
+            System.out.println(next);
+        }
+        System.out.println();
     }
 
     private static void printUsage() {

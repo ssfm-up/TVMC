@@ -9,31 +9,44 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.stream.IntStream;
 
-import static cnf.CNF.and;
-import static cnf.CNF.neg;
+import static cnf.CNF.*;
 
 public class UnboundedModelChecker {
     public static final Formula UNKNOWN = ThreeValuedModelChecker.UNKNOWN;
     final ThreeValuedModelChecker threeValuedModelChecker;
+    private ArrayList<Integer[]> combinations = null;
 
     public UnboundedModelChecker(CFG cfgs, int maxBound, Properties config) {
         threeValuedModelChecker = new ThreeValuedModelChecker(cfgs, maxBound, config);
+    }
+
+    public UnboundedModelChecker(int maxbound) {
+        threeValuedModelChecker = new ThreeValuedModelChecker(maxbound);
     }
 
     public void setCfgs(CFG cfgs) {
         threeValuedModelChecker.setCfgs(cfgs);
     }
 
-    public Formula getBaseCaseFormula(Formula ltlPropertyEncoding) {
+    public Formula constructBaseCaseFormula(Formula ltlPropertyEncoding) {
         return threeValuedModelChecker.constructFormula(ltlPropertyEncoding);
     }
 
-    Formula getStepFormula(Formula ltlPropertyEncoding, int numProcesses, int numLocs) {
-        return threeValuedModelChecker.constructStepFormula(ltlPropertyEncoding, numProcesses, numLocs);
+    public Formula constructAdditiveBaseCase(int maxBound, Formula ltlAddition) {
+        return and(threeValuedModelChecker.constructAdditiveBaseCase(maxBound), ltlAddition);
     }
 
-    private Formula safeLoc(int k, int loc, int numberOfLocs, int processes) {
+    public Formula constructAdditiveStepCase(int maxBound, Formula ltlAddition, int numProcesses, int numOfLocs) {
+        return and(threeValuedModelChecker.constructAdditiveStepCase(maxBound, numProcesses, numOfLocs), ltlAddition);
+    }
+
+    Formula getStepFormula(Formula ltlPropertyEncoding, int numProcesses, int numLocs, boolean stepWithInit) {
+        return threeValuedModelChecker.constructStepFormula(ltlPropertyEncoding, numProcesses, numLocs, stepWithInit);
+    }
+
+    Formula safeAnyPairAtLoc(int k, int loc, int numberOfLocs, int processes) {
         ArrayList<Formula> formulas = new ArrayList<>();
         for (int i = 0; i < processes - 1; i++) {
             for (int j = i + 1; j < processes; j++) {
@@ -46,9 +59,41 @@ public class UnboundedModelChecker {
         return and(formulas);
     }
 
+    Formula safeAnyPMin1CombinationAtLoc(int k, int loc, int numberOfLocs, int processes) {
+        if (combinations == null) {
+            combinations = new ArrayList<>();
+            combinations(IntStream.range(0, processes).toArray(), processes - 1, 0, new Integer[processes - 1], combinations);
+        }
+
+        ArrayList<Formula> formulas = new ArrayList<>();
+        for (Integer[] processCombination : combinations) {
+            ArrayList<Formula> conjunction = new ArrayList<>();
+            for (Integer p : processCombination) {
+                Formula locP = threeValuedModelChecker.encodeLocation(p, loc, k, numberOfLocs);
+                conjunction.add(locP);
+            }
+            formulas.add(neg(and(conjunction)));
+        }
+
+        return and(formulas);
+    }
+
+    private static void combinations(int[] arr, int len, int startPosition, Integer[] result, ArrayList<Integer[]> out) {
+        if (len == 0) {
+            Integer[] tmp = new Integer[result.length];
+            System.arraycopy(result, 0, tmp, 0, tmp.length);
+            out.add(tmp);
+            return;
+        }
+        for (int i = startPosition; i <= arr.length - len; i++) {
+            result[result.length - len] = arr[i];
+            combinations(arr, len - 1, i + 1, result, out);
+        }
+    }
+
     private Formula unsafeAllAtLoc(int k, int loc, int numberOfLocs, int processes) {
         ArrayList<Formula> formulas = new ArrayList<>();
-        for (int i = 0; i < processes - 1; i++) {
+        for (int i = 0; i < processes; i++) {
             Formula locI = threeValuedModelChecker.encodeLocation(i, loc, k, numberOfLocs);
             formulas.add(locI);
         }
@@ -56,22 +101,31 @@ public class UnboundedModelChecker {
         return and(formulas);
     }
 
-    Formula generateSafetyEncodingAllProcessesFormula(int maxBound, int loc, int processes, int numberOfLocs) {
+    Formula safeAllAtLoc(int k, int loc, int numberOfLocs, int processes) {
+        return neg(unsafeAllAtLoc(k, loc, numberOfLocs, processes));
+    }
+
+    Formula generateSafetyEncodingFormula(int maxBound, int loc, int processes, int numberOfLocs, SafeLocEncodingFunction f) {
         List<Formula> safetyFormulas = new ArrayList<>();
         for (int k = 0; k <= maxBound - 1; k++) {
-            safetyFormulas.add(neg(unsafeAllAtLoc(k, loc, numberOfLocs, processes)));
+            final Formula safe = f.apply(k, loc, numberOfLocs, processes);
+            final Formula zVar = var(threeValuedModelChecker.zVar(k));
+            safetyFormulas.add(and(iff(safe, zVar), zVar));
         }
-        safetyFormulas.add(unsafeAllAtLoc(maxBound, loc, numberOfLocs, processes));
+        final Formula safe = f.apply(maxBound, loc, numberOfLocs, processes);
+        final Formula zVar = var(threeValuedModelChecker.zVar(maxBound));
+        safetyFormulas.add(iff(safe, zVar));
+
         return and(safetyFormulas);
     }
 
-    Formula generateSafetyEncodingFormula(int maxBound, int loc, int processes, int numberOfLocs) {
-        List<Formula> safetyFormulas = new ArrayList<>();
-        for (int k = 0; k <= maxBound - 1; k++) {
-            safetyFormulas.add(safeLoc(k, loc, numberOfLocs, processes));
-        }
-        safetyFormulas.add(neg(safeLoc(maxBound, loc, numberOfLocs, processes)));
-        return and(safetyFormulas);
+    // Generates only the last part of the safety encoding
+    Formula generateAdditiveSafetyEncoding(int maxBound, int loc, int processes, int numberOfLocs, SafeLocEncodingFunction f) {
+        final Formula safe = f.apply(maxBound, loc, numberOfLocs, processes);
+        final Formula zVar = var(threeValuedModelChecker.zVar(maxBound));
+
+        final Formula zKMin1 = var(threeValuedModelChecker.zVar(maxBound - 1));
+        return and(zKMin1, iff(safe, zVar));
     }
 
     /**
@@ -87,6 +141,18 @@ public class UnboundedModelChecker {
     }
 
     /**
+     * Check is a satisfying assignment for a formula can be found
+     *
+     * @param solver        A solver to be used for the satisfiability check
+     * @param constraints   The constraints that should not be learned by the solver
+     * @param printTrueVars Whether to print the true variables
+     * @return Is the formula satisfiable
+     */
+    boolean checkSatisfiability(ISolver solver, IVecInt constraints, boolean printTrueVars) {
+        return threeValuedModelChecker.checkSatisfiability(solver, constraints, printTrueVars);
+    }
+
+    /**
      * Print a table showing the mapping from variables names to aliases in solvers' naming conventions
      */
     void printVars() {
@@ -95,5 +161,13 @@ public class UnboundedModelChecker {
 
     public Map<String, Var> getVars() {
         return threeValuedModelChecker.vars;
+    }
+
+    void printFormula(Formula formula) {
+        threeValuedModelChecker.printFormula(formula);
+    }
+
+    public void setMaxBound(int maxBound) {
+        threeValuedModelChecker.setMaxBound(maxBound);
     }
 }
