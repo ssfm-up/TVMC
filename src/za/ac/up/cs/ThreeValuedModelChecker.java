@@ -360,6 +360,25 @@ public class ThreeValuedModelChecker {
                     System.out.println(path);
                 }
 
+
+                String[] split = path.toString().split("\n");
+                int i = 0;
+                while (i < split.length) {
+                    String stepStr = split[i];
+                    final int indexOfUnknownTrans = stepStr.indexOf("choice(false, false)");
+                    if (indexOfUnknownTrans != -1) {
+
+                        break;
+                    }
+
+                    i++;
+                }
+
+                if (i != split.length) {
+                    System.out.println("First unknown transition is from state " + path.steps.get(i));
+                }
+
+
                 return true;
             } else {
                 System.out.println("NOT SATISFIABLE");
