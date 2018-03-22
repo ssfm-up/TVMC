@@ -327,7 +327,9 @@ public class ThreeValuedModelChecker {
             Set<Var> trueVars = CNF.satisfiable(cnfFormula, solver, constraints, tseitinVisitor, x);
             if (trueVars != null) {
                 System.out.println("SATISFIABLE");
-                printTrueVars(trueVars);
+                final Path path = generateExecutionPath(trueVars);
+                System.out.println();
+                System.out.println(path);
                 return true;
             } else {
                 System.out.println("NOT SATISFIABLE");
@@ -352,7 +354,12 @@ public class ThreeValuedModelChecker {
                 }
 
                 System.out.println("SATISFIABLE");
-                if (printTrueVars) printTrueVars(trueVars);
+                final Path path = generateExecutionPath(trueVars);
+                if (printTrueVars) {
+                    System.out.println();
+                    System.out.println(path);
+                }
+
                 return true;
             } else {
                 System.out.println("NOT SATISFIABLE");
@@ -365,7 +372,7 @@ public class ThreeValuedModelChecker {
         return false;
     }
 
-    private void printTrueVars(Set<Var> trueVars) {
+    private Path generateExecutionPath(Set<Var> trueVars) {
         System.out.println("True Variables:");
         Path executionPath = new Path(cfgs, maxBound);
         for (String key : new TreeSet<>(vars.keySet())) {
@@ -384,9 +391,9 @@ public class ThreeValuedModelChecker {
                 System.out.println(key);
             }
         }
+
         // TODO: Use list of true unknowns here for refinement
-        System.out.println();
-        System.out.println(executionPath);
+        return executionPath;
     }
 
     /**
