@@ -97,8 +97,11 @@ public class Path {
             }
             stepString = stepString.substring(pos + 1);
         }
-        int stateOfCurProcess = Character.getNumericValue(states[processChanged]);
-        List<Transition> stateTransitions = cfgs.getProcess(processChanged).getStates().get(stateOfCurProcess).getTransitions();
+        List<Transition> stateTransitions = new ArrayList<>();
+        if (processChanged != -1) {
+            int stateOfCurProcess = Character.getNumericValue(states[processChanged]);
+            stateTransitions = cfgs.getProcess(processChanged).getStates().get(stateOfCurProcess).getTransitions();
+        }
 
         String guard = "";
         for (Transition t : stateTransitions) {

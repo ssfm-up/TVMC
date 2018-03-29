@@ -170,4 +170,15 @@ public class UnboundedModelChecker {
     public void setMaxBound(int maxBound) {
         threeValuedModelChecker.setMaxBound(maxBound);
     }
+
+    public void clearAssumptions() {
+        threeValuedModelChecker.clearAssumptions();
+    }
+
+    public List<Integer> getAssumptions() {
+        final List<Integer> assumptions = threeValuedModelChecker.getTrueAssumptions();
+        assumptions.addAll(threeValuedModelChecker.getFalseAssumptions());
+
+        return assumptions;
+    }
 }

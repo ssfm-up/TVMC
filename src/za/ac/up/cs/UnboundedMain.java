@@ -126,6 +126,8 @@ public class UnboundedMain {
 
                     nextKResetFormulaCase(plusMinSharing, baseSolver, baseCase);
 
+                    modelChecker.clearAssumptions();
+
                     shouldResetBase = false;
                 } else if (baseRequiresRefinement) {
                     // baseRequiresRefinement && shouldResetBase
@@ -144,12 +146,21 @@ public class UnboundedMain {
                     nextKWithoutRefinementCase(kSharing, plusMinSharing, baseSolver, addition);
                     if (trackSharing)
                         sharedBaseBound.add(baseSolver.solverPlus.getLearnedConstraints().size() + baseSolver.solverMin.getLearnedConstraints().size());
+
+                    modelChecker.clearAssumptions();
                 }
 
                 final int zVarNum = modelChecker.threeValuedModelChecker.zVar(k).number;
 
                 long satStartTime = System.nanoTime();
-                bUnknown = modelChecker.checkSatisfiability(baseSolver.solverPlus, new VecInt(new int[]{3, -zVarNum}), printTrueVars);
+
+                List<Integer> assumptions = modelChecker.getAssumptions();
+                assumptions.add(3);
+                assumptions.add(-zVarNum);
+                System.out.println("assumptions = " + assumptions);
+                int[] ints = assumptions.stream().mapToInt(Integer::intValue).toArray();
+
+                bUnknown = modelChecker.checkSatisfiability(baseSolver.solverPlus, new VecInt(ints), printTrueVars);
                 long satDuration = System.nanoTime() - satStartTime;
                 if (printSatTimes)
                     System.out.println("satDuration = " + satDuration / 1e9);
@@ -170,7 +181,13 @@ public class UnboundedMain {
                         if (trackSharing)
                             sharedBasePlusToMinus.add(baseSolver.solverPlus.getLearnedConstraints().size());
 
-                        bNotUnknown = modelChecker.checkSatisfiability(baseSolver.solverPlus, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
+                        assumptions = modelChecker.getAssumptions();
+                        assumptions.add(-3);
+                        assumptions.add(-zVarNum);
+                        System.out.println("assumptions = " + assumptions);
+                        ints = assumptions.stream().mapToInt(Integer::intValue).toArray();
+
+                        bNotUnknown = modelChecker.checkSatisfiability(baseSolver.solverPlus, new VecInt(ints), printTrueVars);
                         if (printStats) {
                             System.out.println("baseSolver.solverPlus:");
                             printStats(baseSolver.solverPlus);
@@ -180,7 +197,13 @@ public class UnboundedMain {
                             printLearnedConstraints(baseSolver.solverPlus);
                         }
                     } else {
-                        bNotUnknown = modelChecker.checkSatisfiability(baseSolver.solverMin, new VecInt(new int[]{-3, -zVarNum}), printTrueVars);
+                        assumptions = modelChecker.getAssumptions();
+                        assumptions.add(-3);
+                        assumptions.add(-zVarNum);
+                        System.out.println("assumptions = " + assumptions);
+                        ints = assumptions.stream().mapToInt(Integer::intValue).toArray();
+
+                        bNotUnknown = modelChecker.checkSatisfiability(baseSolver.solverMin, new VecInt(ints), printTrueVars);
                         if (printStats) {
                             System.out.println("baseSolver.solverMin:");
                             printStats(baseSolver.solverMin);

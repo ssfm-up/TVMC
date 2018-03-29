@@ -10,6 +10,8 @@ import org.sat4j.specs.IVecInt;
 import org.sat4j.specs.TimeoutException;
 
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static cnf.CNF.*;
 
@@ -26,6 +28,11 @@ public class ThreeValuedModelChecker {
     final Map<String, Integer> predMap = new HashMap<>();
     final Map<Var, Integer> predUnknownMap = new HashMap<>();
     final Map<Formula, String> guardUnknownMap = new HashMap<>();
+
+    private final Set<String> trueAssumptions = new HashSet<>();
+
+    private final Set<String> falseAssumptions = new HashSet<>();
+
     private int maxBound;
     CFG cfgs;
     boolean checkFairness = false;
@@ -375,7 +382,37 @@ public class ThreeValuedModelChecker {
                 }
 
                 if (i != split.length) {
-                    System.out.println("First unknown transition is from state " + path.steps.get(i));
+                    System.out.println("First unknown transition is from state " + i + ": " + path.steps.get(i));
+
+                    for (int j = 0; j <= i; j++) {
+                        final Step currentStep = path.steps.get(j);
+                        trueAssumptions.addAll(currentStep.locations);
+                        trueAssumptions.addAll(currentStep.predicates);
+
+                        final Stream<String> stringStream = vars.keySet().stream().filter(s -> {
+                            if (s.startsWith("l_")) {
+                                final String boundStr = s.substring(s.lastIndexOf('_') + 1, s.length());
+                                final int bound = Integer.parseInt(boundStr);
+                                if (bound <= currentStep.getBound()) return true;
+                            }
+
+                            if (s.startsWith("p_")) {
+                                String boundStr = s.substring(2).substring(s.indexOf('_') + 1);
+                                boundStr = boundStr.substring(0, boundStr.lastIndexOf('_'));
+                                final int bound = Integer.parseInt(boundStr);
+                                if (bound <= currentStep.getBound()) return true;
+                            }
+
+                            return false;
+                        });
+
+                        final Set<String> allVars = stringStream.collect(Collectors.toSet());
+                        allVars.removeAll(trueAssumptions);
+                        falseAssumptions.addAll(allVars);
+                    }
+
+                    System.out.println("trueAssumptions = " + trueAssumptions);
+                    System.out.println("falseAssumptions = " + falseAssumptions);
                 }
 
 
@@ -392,7 +429,8 @@ public class ThreeValuedModelChecker {
     }
 
     private Path generateExecutionPath(Set<Var> trueVars, boolean printTrueVars) {
-        System.out.println("True Variables:");
+        if (printTrueVars)
+            System.out.println("True Variables:");
         Path executionPath = new Path(cfgs, maxBound);
         for (String key : new TreeSet<>(vars.keySet())) {
             if (trueVars.contains(vars.get(key))) {
@@ -414,6 +452,12 @@ public class ThreeValuedModelChecker {
 
         // TODO: Use list of true unknowns here for refinement
         return executionPath;
+    }
+
+
+    public void clearAssumptions() {
+        trueAssumptions.clear();
+        falseAssumptions.clear();
     }
 
     /**
@@ -505,5 +549,13 @@ public class ThreeValuedModelChecker {
 
     public void setMaxBound(int maxBound) {
         this.maxBound = maxBound;
+    }
+
+    public List<Integer> getTrueAssumptions() {
+        return trueAssumptions.stream().map(s -> getNamedVar(s).number).collect(Collectors.toList());
+    }
+
+    public List<Integer> getFalseAssumptions() {
+        return falseAssumptions.stream().map(s -> -getNamedVar(s).number).collect(Collectors.toList());
     }
 }
