@@ -6,13 +6,12 @@
 To run the tool, execute the following command in the same directory as the JAR:
 
 ```
-java -jar TVMC.jar <inputfile> <bound> <options>
+java -jar TVMC.jar <inputfile> <bound>
 ```
 
 `<inputfile>` refers to the JSON file containing the control flow graph.
 
 `<bound>` is the maximum bound (eg. 20)
 
-`<options>` maybe be one or several of the following:
- - `--checkSafety`
- - `--checkLiveness`
+## Building the jar
+Either use Intellj to build the artifact or use ```mvn package```
